@@ -1,0 +1,94 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The instruction to limit reasoning length to \"roughly half\" of the code size is imprecise and may lead to differing interpretations of how much detail is required."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "9dc818ec7da079915f7baaa4e9f3043603fbce3478bcac4d986229ae7dd7ef8d",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:37:08.604913+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "9dc818ec7da079915f7baaa4e9f3043603fbce3478bcac4d986229ae7dd7ef8d",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:37:15.808996+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 3.5
+  },
+  "semantic_quality_score": 99.375,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 1.25,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 1.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The instruction to limit reasoning length to \"roughly half\" of the code size is imprecise and may lead to differing interpretations of how much detail is required."
+  ],
+  "semantic_eligible": true
+}

@@ -1,0 +1,80 @@
+You are an expert software engineer and security analyst specializing in vulnerability detection.
+
+Analyze the provided code for security vulnerabilities using Structured Chain-of-Thought (SCoT).
+
+## SCoT reasoning framework
+Structure your reasoning explicitly around the program's concrete structures and anchor every claim to the exact code (verbatim snippet + line numbers). Work through the following phases in order.
+
+### Phase 1 — Input & provenance map (Sequence)
+List every input to the analyzed code (parameters, globals, return values of called functions, library/OS data). For each, state:
+- its data type and range,
+- its provenance: attacker-controlled (trace where it originates, e.g., argv, sockets, files, user data) vs. trusted/framework-internal (name the invariant that guarantees it), and
+- any constraints already imposed on it by the shown code (checks, casts, whitelists).
+
+### Phase 2 — Structure walk
+Walk the code through its concrete structures. At every step, track the exact sizes, lengths, indices, and pointer values as they flow, and name the precise line numbers involved.
+
+**Sequence (ordered steps):** State each operation in order. For every buffer or allocation, record its exact size (from the declaration or call) and how that size changes as values flow. Identify each place a value changes representation (e.g., int to size_t, 32-bit to 64-bit, narrowing cast) and whether the conversion can change the value.
+
+**Branch (if/else):** For each conditional, state precisely what the condition guards, then evaluate BOTH outcomes (taken and not-taken). Decide whether the guard's bound fully covers the subsequent dangerous operation:
+- If a guard exists but its bound is insufficient, give the concrete value that passes the guard yet causes the failure.
+- If a guard is absent, do not assume one exists; state the missing check and which input could exploit its absence.
+- If a guard fully covers the operation, say so explicitly and move on.
+
+**Loop (for/while):** For each loop, derive the iteration bound from the loop's own condition (not intuition). Compare the maximum loop index against the buffer size accessed inside the body; check the strict-inequality / off-by-one relationship explicitly. State whether the loop terminates and whether the largest reachable index can exceed the buffer bound.
+
+### Phase 3 — Candidate findings and three-part confirmation
+For every suspected vulnerability you form during the walk, subject it to a three-part confirmation, each part anchored to specific lines of the shown code:
+1. **Taint:** Which input is attacker-controlled, and does it flow unvalidated (or insufficiently validated) to the dangerous sink? Name the sink line.
+2. **Reachability:** Show the exact path/branch in the shown code that reaches the sink, and the concrete value or condition that triggers the failure. A path that depends on code not shown, or on a caller violating an internal contract, is NOT reachability within this analysis.
+3. **Impact:** State the precise security mechanism and the single primary CWE (with a matching secondary CWE only if independently confirmed).
+
+A positive ("vulnerable") verdict is justified ONLY when all three parts are substantiated with concrete code anchors in the shown code. Matters that fail part 2 (e.g., depending on an out-of-scope caller, on a framework/library invariant, on unchecked allocation failure, on silent truncation without security impact, or on a purely theoretical worst case) must be recorded in `notes.limitations` as unconfirmed hypotheses or robustness concerns — NOT reported as vulnerabilities.
+
+### Phase 4 — Verification pass
+Before finalizing, re-check every candidate you flagged. If a candidate's taint, reachability, or impact cannot be tied to a concrete line and concrete value, demote it to a limitation and do not list CWEs for it. Confirm that any "not vulnerable" conclusion is supported by the actual guards and sizes you tracked, rather than by assumption.
+
+## Rules
+- Base all reasoning only on the given code; do not rewrite or modify it.
+- Follow actual control flow (paths, checks, state changes); track real values, not hypothetical callers.
+- Focus on security-relevant behavior: memory safety, bounds, lifetime, integer safety, input validation, authz/authn, unsafe APIs.
+- Distinguish a confirmed, reachable, attacker-triggerable vulnerability from a defensive-hardening or robustness concern.
+- Do NOT add few-shot examples.
+- After reasoning, output ONLY the JSON object described below.
+
+## Output format
+- First: write your SCoT reasoning in plain text with numbered steps (Phases 1–4).
+- Then: output ONLY one JSON object (no markdown, no extra text).
+
+Required JSON schema (fields and types must match exactly):
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+## Evidence precision requirements
+- For each evidence item, set `location.start_line` and `location.end_line` to the real, minimal line span of the sink in the shown code (a single line for a single-operation sink).
+- Set `snippet` to the exact code at those lines, quoted verbatim — no paraphrasing, ellipses, or substitutions.
+- Set `reason` to tie the specific index/pointer/size to its source (Phase 1) and to the concrete confirmed failure (Phase 3). Include at least one evidence item per confirmed finding.
+- Keep `notes.assumptions` for invariants you relied on and `notes.limitations` for unconfirmed hypotheses and out-of-scope concerns.
+
+Code:
+{{CODE}}

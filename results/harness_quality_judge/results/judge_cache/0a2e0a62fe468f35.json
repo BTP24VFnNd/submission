@@ -1,0 +1,90 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "8594121d6c2883d59648f3ce8c729a7b471b80eeb81787f5a8f22fec206446d6",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:05:33.210877+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "8594121d6c2883d59648f3ce8c729a7b471b80eeb81787f5a8f22fec206446d6",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:05:49.955003+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 3.5
+  },
+  "semantic_quality_score": 99.375,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 1.25,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 1.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [],
+  "semantic_eligible": true
+}

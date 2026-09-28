@@ -1,0 +1,96 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "9e88ef46dcedd2e875a818b9835fee467d8a82505b86c653c48245c574525409",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:09:52.362392+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The instruction to \"state \\\"inference: snippet spans >3 lines\\\" and reduce confidence\" does not specify the exact wording or confidence reduction formula, leaving implementation details ambiguous.",
+        "The rule \"list at most one CWE unless multiple clearly distinct sink types in different branches visible\" may be unclear about what qualifies as \"clearly distinct\" and how to handle nested branches with multiple sink types."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "9e88ef46dcedd2e875a818b9835fee467d8a82505b86c653c48245c574525409",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:10:25.532895+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 3.0
+  },
+  "semantic_quality_score": 98.75,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 0.0,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 0.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The instruction to \"state \\\"inference: snippet spans >3 lines\\\" and reduce confidence\" does not specify the exact wording or confidence reduction formula, leaving implementation details ambiguous.",
+    "The rule \"list at most one CWE unless multiple clearly distinct sink types in different branches visible\" may be unclear about what qualifies as \"clearly distinct\" and how to handle nested branches with multiple sink types."
+  ],
+  "semantic_eligible": true
+}

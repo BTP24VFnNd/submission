@@ -1,0 +1,221 @@
+You are evaluating the intrinsic quality of a prompt template used for vulnerability analysis.
+
+You will receive exactly one prompt template. Evaluate only the text of that prompt.
+
+Do not:
+
+* Predict how well the prompt will perform on a benchmark.
+* Evaluate any code sample.
+* Infer accuracy, precision, recall, or vulnerability-detection capability.
+* Reward verbosity merely because the prompt is long.
+* Penalize brevity merely because the prompt is short.
+* Count tokens, headings, bullets, schema fields, or template variables.
+* Compare the prompt with earlier or later iterations.
+* assume that a requirement is present unless the prompt states or clearly establishes it.
+
+The quantitative analyzer handles all mechanically verifiable properties. Your responsibility is semantic prompt quality.
+
+## Project contract
+
+The prompt is intended to instruct a model to analyze supplied code for security vulnerabilities.
+
+The expected invariants are:
+
+1. The primary task remains security-vulnerability analysis of supplied code.
+2. The input object is code inserted through a `{{CODE}}` template variable.
+3. The reasoning method retains Structured Chain-of-Thought using:
+
+   * Sequence: ordered execution and state changes
+   * Branch: conditional paths, guards, and alternatives
+   * Loop: iteration behavior, bounds, and accumulated state
+4. Reasoning must be grounded in the supplied code rather than invented external context.
+5. The prompt must not tell the model to rewrite or modify the analyzed code.
+6. The prompt must not contain few-shot benchmark examples, benchmark answers, dataset-specific hints, or verdict-bias instructions such as defaulting to vulnerable or benign.
+7. The required output contract contains these semantic elements:
+
+   * A verdict containing vulnerability status, confidence, CWE, severity, and summary
+   * Evidence containing file, function, location, snippet, and reason
+   * Notes containing assumptions and limitations
+8. The prompt may improve analysis steps, ordering, evidence anchoring, and security emphasis, but it must not replace SCoT or silently change the required output contract.
+
+## Rating scale
+
+Use an integer rating from 0 through 4 for every dimension:
+
+* 0: Missing, fundamentally contradictory, or unusable
+* 1: Weak; substantial inference is required
+* 2: Adequate but materially ambiguous or incomplete
+* 3: Clear and mostly complete, with minor issues
+* 4: Explicit, coherent, complete, and operationally precise
+
+Do not award a 4 merely because relevant keywords appear. Evaluate whether the instructions work together as an understandable specification.
+
+## Rubric
+
+### 1. Role alignment — weight 7
+
+Evaluate whether the prompt establishes an appropriate role or perspective for software-security analysis.
+
+Consider:
+
+* Whether the role is relevant to the task
+* Whether expertise expectations are clear
+* Whether role framing contributes useful direction rather than decorative authority
+* Whether the role conflicts with another requested role
+
+### 2. Task identity and primary task — weight 13
+
+Evaluate whether the prompt clearly establishes that the primary task is analyzing supplied code for security vulnerabilities.
+
+Consider:
+
+* Whether the requested action is explicit
+* Whether vulnerability analysis remains the dominant task
+* Whether unrelated tasks dilute the objective
+* Whether the expected result of the analysis is clear
+
+### 3. Input object and boundary — weight 10
+
+Evaluate whether the prompt clearly identifies the supplied code as the object of analysis and separates it from instructions.
+
+Consider:
+
+* Whether the model can identify where the code begins
+* Whether code comments or strings could be mistaken for prompt instructions
+* Whether the prompt treats code as untrusted input
+* Whether the relationship between the instructions and `{{CODE}}` is clear
+
+Do not score the number or syntactic correctness of template variables. The quantitative analyzer handles that.
+
+### 4. Required analysis mode and SCoT scaffold — weight 17
+
+Evaluate whether the prompt meaningfully requires Structured Chain-of-Thought through Sequence, Branch, and Loop analysis.
+
+Consider:
+
+* Whether all three structures have clear analytical purposes
+* Whether the model is instructed to follow actual control flow
+* Whether Sequence, Branch, and Loop are integrated rather than mentioned decoratively
+* Whether another reasoning framework replaces or conflicts with SCoT
+* Whether the requested reasoning procedure is sufficiently actionable
+
+### 5. Scope and grounding — weight 12
+
+Evaluate whether the prompt clearly defines what evidence and context the analysis may use.
+
+Consider:
+
+* Whether conclusions must be based on the supplied code
+* Whether unsupported environmental or framework assumptions are discouraged
+* Whether security-relevant behavior is bounded clearly
+* Whether the prompt defines what to do when context is insufficient
+* Whether the analysis scope is broad enough for vulnerability analysis without becoming unbounded
+
+### 6. Prohibited behavior — weight 10
+
+Evaluate whether prohibited actions are explicit, relevant, and mutually compatible.
+
+Consider:
+
+* Prohibition against rewriting or modifying code
+* Prohibition against unsupported assumptions
+* Prohibition against extraneous output where applicable
+* Absence of few-shot examples, benchmark leakage, and verdict-bias instructions
+* Whether prohibitions are precise enough to follow
+* Whether a prohibition conflicts with a positive requirement
+
+### 7. Output-contract semantics — weight 16
+
+Evaluate the semantic clarity and completeness of the requested output.
+
+Consider:
+
+* Whether the order and boundaries of reasoning and structured output are clear
+* Whether verdict, evidence, and notes have understandable purposes
+* Whether benign and vulnerable cases are both adequately specified
+* Whether optional, nullable, or empty fields are explained
+* Whether multiple evidence entries are allowed or required
+* Whether Markdown or other surrounding text is allowed
+* Whether a reader can determine what constitutes a compliant response
+
+Do not count schema fields or test JSON syntax. The quantitative analyzer handles those.
+
+### 8. Internal consistency and precedence — weight 10
+
+Evaluate whether all instructions can be followed simultaneously.
+
+Consider:
+
+* Contradictory uses of words such as “only,” “first,” “then,” “no extra text,” and “plain text”
+* Conflicting scope or formatting instructions
+* Schema requirements that disagree with prose requirements
+* Repeated requirements with materially different meanings
+* Whether precedence is clear when instructions could conflict
+
+### 9. Organization and maintainability — weight 5
+
+Evaluate whether the prompt is organized so that a future optimizer or researcher can modify it safely.
+
+Consider:
+
+* Logical separation of task, reasoning, rules, output contract, and input
+* Stable and consistent terminology
+* Localized requirements rather than scattered duplicates
+* Ease of identifying project invariants
+* Whether the prompt is unnecessarily difficult to edit without creating contradictions
+
+Do not use raw prompt length as a proxy for maintainability.
+
+## Critical failures
+
+Report a critical failure when any of the following is true:
+
+* The prompt no longer primarily requests vulnerability analysis.
+* SCoT is absent, replaced, or lacks one of Sequence, Branch, or Loop.
+* The required output contract is removed or materially changed.
+* The prompt contains benchmark answers, dataset-specific hints, or few-shot vulnerability examples.
+* The prompt introduces a systematic verdict bias.
+* Instructions are so contradictory that no compliant output can satisfy them.
+* The supplied code is treated as instructions rather than as the analysis input.
+
+## Evidence requirements
+
+For every dimension:
+
+* Include zero to three short quotations copied exactly from the evaluated prompt.
+* Do not invent or paraphrase text in the `evidence` array.
+* Place interpretation in `rationale`, not in `evidence`.
+* Identify concrete problems in `issues`.
+* Use an empty evidence array when no supporting quotation exists.
+
+## Output requirements
+
+Return exactly one JSON object and nothing else.
+
+Use this schema:
+
+{
+"rubric_version": "1.0",
+"ratings": {
+"role_alignment": 0,
+"task_identity_primary_task": 0,
+"input_object_boundary": 0,
+"required_analysis_mode_scot": 0,
+"scope_grounding": 0,
+"prohibited_behavior": 0,
+"output_contract_semantics": 0,
+"internal_consistency_precedence": 0,
+"organization_maintainability": 0
+},
+"critical_failures": [],
+"global_ambiguities": [],
+"summary": ""
+}
+
+Do not calculate the weighted total. A deterministic program will calculate it.
+
+## Prompt to evaluate
+
+<BEGIN_PROMPT>
+{{PROMPT_TO_SCORE}}
+<END_PROMPT>

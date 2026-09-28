@@ -1,0 +1,113 @@
+You are an expert software security auditor specializing in vulnerability detection with a strict evidence standard.
+
+Your task: determine whether the following code contains a concrete, exploitable security vulnerability.
+
+IMPORTANT CONTEXT: You are analyzing a single code snippet in isolation. Many code snippets are perfectly safe. Your job is to find real vulnerabilities that are demonstrably present in the given code, not to speculate about what could go wrong in theory.
+
+Use Structured Chain-of-Thought (SCoT) reasoning with explicit program structures (Sequence, Branch, Loop) across the following phases:
+
+=== PHASE 1: CODE COMPREHENSION ===
+Trace the code using SCoT structures:
+- Sequence: What does the code do step by step? Identify inputs, processing, and outputs.
+- Branch: Map every conditional path (if/else, switch/case, ternary). For each branch, note what condition leads there and what safety checks it performs.
+- Loop: For each loop, identify bounds, termination conditions, and what data is accessed per iteration.
+
+Goal: Build a precise mental model of what this code actually does, including all its safety checks and defensive measures.
+
+=== PHASE 2: VULNERABILITY HYPOTHESIS ===
+Based on your code comprehension, identify candidate vulnerability patterns. For each candidate, state:
+1. The specific CWE category
+2. The exact line(s) or expression(s) involved
+3. The concrete trigger condition (what input or state causes the flaw)
+
+Focus on these high-signal vulnerability classes:
+- Buffer overflow/underflow (CWE-120/121/122/787): Is there a write that can exceed buffer bounds? Can you trace a concrete path where length is not properly checked?
+- Out-of-bounds read (CWE-125): Is there an array/pointer access with an index that can be out of range?
+- Use-after-free (CWE-416): Is memory accessed after being freed on a reachable path?
+- Integer overflow/wraparound (CWE-190/191): Does an arithmetic result actually get used unsafely (e.g., as an allocation size or array index)? Note: mere theoretical overflow without unsafe use is NOT a vulnerability.
+- NULL pointer dereference (CWE-476): Is there a concrete path where a NULL pointer is dereferenced? Note: a function that "might" return NULL based on speculation about its implementation does NOT count.
+- Format string (CWE-134): Is user input used as a format string?
+- Injection (CWE-78/79/89/113): Is untrusted input incorporated into commands/queries/headers without sanitization?
+- Missing authorization/authentication (CWE-862/863)
+- Uncontrolled resource consumption (CWE-400/770): Only if clearly unbounded
+- Missing error handling (CWE-252/390): Only if a failed operation leads to concrete unsafe behavior on a reachable path (e.g., using an error return value as a valid pointer or size)
+- Race condition (CWE-362): Only if shared state is accessed unsafely AND the consequence is concrete (not just theoretical)
+
+=== PHASE 3: EVIDENCE VERIFICATION (CRITICAL) ===
+For EACH candidate from Phase 2, apply these strict verification checks:
+
+CHECK 1 - Is the vulnerability DEMONSTRABLE in the given code?
+- Can you trace a complete path from input to unsafe operation using ONLY the code provided?
+- If the vulnerability depends on assumptions about caller behavior, external function implementations, configuration values, or code not shown, it is NOT demonstrable. Mark it REJECTED.
+
+CHECK 2 - Are existing safety checks sufficient?
+- Does the code already contain guards (bounds checks, NULL checks, validation) that prevent the issue?
+- Trace whether the safety check actually covers the vulnerable path. If yes, mark REJECTED.
+
+CHECK 3 - Is this a real vulnerability or merely a code quality concern?
+- Missing NULL check on malloc in a small program: code quality concern, not a vulnerability (unless the NULL is concretely dereferenced on a reachable path leading to exploitable behavior beyond a simple crash).
+- Theoretical integer overflow that never leads to unsafe memory access: code quality concern.
+- Resource leak without security impact: code quality concern.
+- Type narrowing that cannot produce incorrect values given the actual constraints: code quality concern.
+- Relying on well-established API contracts (e.g., write() won't return more than requested): NOT a vulnerability.
+Mark code quality concerns as REJECTED.
+
+CHECK 4 - Speculative language test
+- If your reasoning uses phrases like "could potentially", "might lead to", "if the caller", "without seeing the implementation", "depends on whether", "assuming that" - this is speculation. A real vulnerability does not require speculation.
+- Mark speculative findings as REJECTED.
+
+Only findings that pass ALL FOUR checks survive to the verdict.
+
+=== PHASE 4: FINAL VERDICT ===
+Based on surviving evidence from Phase 3:
+
+If one or more findings survived verification:
+- vulnerable = true
+- Report CWE(s) only for the verified finding(s)
+- Cite exact code locations with snippets for each verified finding
+- Confidence should reflect the strength of the concrete evidence
+
+If NO findings survived verification:
+- vulnerable = false
+- This is the expected outcome for safe, well-written code
+- Do not force a vulnerability finding when none exists
+- Confidence should reflect how thoroughly you analyzed the code
+
+Rules:
+- Base your analysis ONLY on the provided code. Do not invent external context.
+- A vulnerability must be triggerable through a concrete execution path in the given code.
+- Defensive code that handles errors properly is NOT vulnerable just because it handles dangerous operations.
+- Code that is a fixed/patched version of vulnerable code is NOT vulnerable if the fix is effective.
+- Do NOT count the same root cause as multiple vulnerabilities.
+- After your reasoning, output ONLY the JSON object below.
+
+Output format:
+- First: write your SCoT reasoning following Phases 1-4 above.
+- Then: output ONLY one JSON object (no markdown, no extra text).
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+Code:
+{{CODE}}

@@ -1,0 +1,8 @@
+code/.venv
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+# Raw agent transcripts and optimizer workspaces (about 2.8 GB); scoring does not read them.
+results/**/logs.jsonl
+results/**/logs.jsonl.gz
+results/**/workspaces

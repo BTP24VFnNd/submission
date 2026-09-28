@@ -1,0 +1,87 @@
+You are an expert software engineer and security analyst.
+
+Analyze the following code for security vulnerabilities.
+
+Use Structured Chain-of-Thought (SCoT): reason using explicit program structures:
+- Sequence (ordered steps)
+- Branch (if/else)
+- Loop (for/while)
+
+Two disciplines apply to EVERY step below:
+1. GUARD ANCHORING: whenever you claim a check, bound, or invariant exists, you must QUOTE the exact statement from the given code that enforces it. A bound you cannot quote from the given code (e.g., "the decoder/framework/caller guarantees this") does not exist for purposes of your analysis — record it in notes.assumptions instead of relying on it.
+2. EDGE TESTING: whenever you evaluate a guard or a sink, test it against the boundary values of the data reaching it (0, -1, empty, exactly-at-limit, one-past-limit, sign-flipped, truncated or widened across a type boundary, min/max of its declared width) — not just typical values. Off-by-one defects live at exactly these values.
+
+Perform the following SCoT procedure, writing each step with numbered program-structure labels:
+
+STEP 1 — SEQUENCE: Input and trust-boundary inventory.
+Enumerate every input this code consumes (parameters, return values of calls, parsed data, globals, configuration). Branch on each: is it attacker-influenced (anything crossing a trust boundary: network data, file contents, serialized/parsed/model/saved-state data, guest input, CLI/env arguments, external metadata, strings destined for markup, parameters of a public or exported API, results of accessors that can fail on malformed external data) or internal/trusted (values this code itself produced and fully constrains)? For each input, record: (a) the exact line where it enters, (b) its declared type and width, (c) the provenance verdict. Never assume an external input is well-formed just because the code reads it.
+
+STEP 2 — LOOP: Taint trace with guard verification.
+For each attacker-influenced input (for each input, follow every path it takes): trace it through assignments, arithmetic, casts, container writes, and pointer arithmetic to every sink (memory access/indexing, allocation sizing, copy/memset/strcpy length, pointer scaling, format strings, command/shell execution, SQL/XPath, file paths, HTML/log/header assembly, crypto key/nonce generation and signature/MAC verification, authz decisions, loop bounds, free/delete, syscall argument marshalling). At each sink:
+- State the precondition the sink requires (bounds, non-NULL, termination, type/width, canonical form).
+- IF you believe the precondition is enforced: QUOTE the enforcing statement(s) verbatim, and verify (i) the guard lies on EVERY path to the sink, and (ii) it rejects every out-of-range value including the boundary cases above. Watch specifically for: `>` where `>=` is required, unsigned wrap inside the guard's own arithmetic, a check performed on a different variable or in the wrong unit, a check placed after the use, and a check that one branch bypasses.
+- ELSE: record the sink as unguarded in this code.
+
+STEP 3 — LOOP: Candidate generation.
+Collect candidates from STEP 2 plus any other defect you observe: integer overflow/underflow and truncation, off-by-one/boundary errors, signedness and width confusion, incorrect pointer scaling (CWE-468), use of potentially dangerous functions (CWE-676: memcpy, sprintf, strcpy, gets, popen, rand for security purposes), uninitialized values reaching a use (CWE-457/CWE-908), lifetimes/UAF/double-free, race conditions, fail-open logic and authz gaps, missing signature/MAC/certificate verification (CWE-347), weak primitives or key sizes (CWE-326/CWE-327), insufficient randomness (CWE-330/CWE-338), uncontrolled resource consumption (CWE-400), and injection at each sink (command CWE-78, SQL CWE-89, XPath CWE-643, XSS CWE-79, format CWE-134, log CWE-117, header CWE-113, path CWE-22, SSRF CWE-918).
+
+STEP 4 — BRANCH: Trigger proof for each candidate (mandatory; apply symmetrically).
+For each candidate, construct the minimal concrete trigger: the exact input values or program state, and the exact path through this code that reaches the defect. Then branch:
+- IF the trigger is reachable using only values this code can actually receive at runtime — attacker-influenced trust-boundary data, any value a caller of an exported/public function may pass, or any state this code itself produces — the candidate is a real vulnerability in this code. For entry points (public API functions, protocol/command/request handlers, format decoders, callbacks invoked with external data), the caller is untrusted: "the caller should have validated" NEVER rejects a candidate there.
+- ELSE IF the trigger requires a precondition this code itself prevents — and you can QUOTE the statement that prevents it on every path — the candidate is NOT a vulnerability in this code.
+- ELSE IF the trigger requires only environment/OS/allocation failure that no attacker can induce, or produces degradation with no security effect (resource leak with no exhaustion path, cosmetic output, style), it is NOT a vulnerability — record it in notes.limitations.
+- Do NOT demote a candidate to "robustness" merely because its worst outcome is a crash: an attacker-reachable NULL deref, uninitialized read, or unbounded loop caused by data crossing a trust boundary is a denial-of-service vulnerability. Conversely, a deref that can only be NULL under allocation failure is not.
+
+STEP 5 — BRANCH: Counterfactual patch test and re-examination of dismissals (symmetry check).
+LOOP over each surviving candidate: write, in words, the minimal one-line guard that would fix it (e.g., "reject the request if offset + length exceeds the buffer size, before the memcpy"). Then LOOP over the given code, line by line, searching for that exact check on every path to the sink. IF you find it, quote it and mark the candidate NOT real — you misread the code. IF it is genuinely absent, the candidate is confirmed. This test is decisive; perform the search explicitly.
+LOOP over each candidate you are about to dismiss, and branch on the dismissal reason:
+- IF dismissed because "the caller / external component is responsible": IF this code is the intake point for data crossing a trust boundary (it parses the file, decodes the message, receives the guest command, implements the public API), missing validation IS the vulnerability — do not defer it.
+- IF dismissed because "the value is bounded by construction / by the framework / by the decode grammar": IF the enforcing statement is not present and quotable in the given code, the dismissal is invalid — restore the candidate and prove its trigger.
+- IF dismissed because "it's only a logic/fail-open/robustness issue": fail-open defaults, error paths that let unvalidated values through, authorization gaps, and attacker-influenced uninitialized values that reach output, comparisons, or control flow ARE vulnerabilities.
+- IF dismissed because "worst case is a crash": keep this dismissal ONLY when triggering requires allocation or environment failure that attacker input cannot cause.
+
+STEP 6 — SEQUENCE: Verdict, CWE, and localization.
+- Decide vulnerable true/false from the surviving candidates only. A single candidate that survives the STEP 5 patch test suffices; do not require multiple findings.
+- CWE: list ONLY the CWE that names the root-cause defect, most specific form first. Prefer the precise class over the generic memory-corruption consequence (e.g., pointer scaling is CWE-468, not merely CWE-787; XPath injection is CWE-943, not CWE-89; resource exhaustion is CWE-400; dangerous-function use is CWE-676). Match the root cause with the standard numbering (CWE-20, CWE-22, CWE-78, CWE-79, CWE-89, CWE-113, CWE-117, CWE-120, CWE-125, CWE-129, CWE-134, CWE-190, CWE-326, CWE-327, CWE-329, CWE-330, CWE-338, CWE-347, CWE-362, CWE-400, CWE-416, CWE-457, CWE-468, CWE-476, CWE-643, CWE-676, CWE-787, CWE-862, CWE-863, CWE-908, CWE-918, CWE-943). Maximum 2 entries. Do not pad with consequence CWEs (privilege escalation, information disclosure as effects), hardening advice, or generic "CWE-20" when a more precise CWE names the defect.
+- Localization: for each confirmed finding, emit one evidence entry whose location is the minimal contiguous range containing the faulty statement — the sink, the unvalidated use, or the missing-check site — plus only the immediately adjacent statements that compute the faulty value or mark where the check belongs (typically 1-8 lines). Anchor primarily on the faulty use/sink line. If the tainted value originates in a distant statement, you may add one additional evidence entry anchored on that origin line for the same finding. start_line and end_line must be concrete integers, never null, and the snippet must be copied verbatim from those lines. Every evidence entry must map to a surviving candidate from STEP 4; never attach tangential evidence, dead helpers, or dismissed candidates.
+
+Rules:
+- Base reasoning only on the given code; anything enforced outside it is an assumption, not a fact. Judge this code as the last line of defense for the values it consumes at its own entry points.
+- Verify each claimed guard by quoting and edge-testing it (STEP 2), and each confirmed defect by actually failing to find its fix in the code (STEP 5). Apply both verifications symmetrically — a defect is real only if its guard is truly absent, and safe code is safe only if its guard is truly present.
+- Follow actual control flow (paths, checks, state changes).
+- Focus on security-relevant behavior (memory safety, bounds, lifetime, input validation, integer safety, injection, authz/authn, crypto, trust-boundary validation, fail-open error handling, attacker-reachable denial of service).
+- Do NOT rewrite or modify code.
+- After reasoning, output ONLY the JSON object described below. The JSON object must be the last thing in your output and must be strictly valid: no markdown fences, no trailing commas, no comments, every field present. If your reasoning runs long, compress the STEP text — never omit, truncate, or malform the JSON.
+
+Output format requirements:
+- First: write your SCoT reasoning in plain text with numbered steps (STEP 1 through STEP 6), labeling sequences, branches, and loops explicitly, and quoting the exact code lines whenever you claim a guard exists or a defect is present.
+- Then: output exactly one JSON object (no markdown fences, no extra text).
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+When vulnerable is true, "evidence" MUST contain at least one entry with concrete integer start_line/end_line, a verbatim snippet from those lines, and a reason naming the root cause and trigger. When vulnerable is false, "evidence" may be empty and dismissed candidates from STEP 4 belong in notes.limitations.
+
+Code:
+{{CODE}}

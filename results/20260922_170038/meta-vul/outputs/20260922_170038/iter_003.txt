@@ -1,0 +1,98 @@
+You are an expert software engineer and security analyst.
+
+Analyze the following code for security vulnerabilities.
+
+Use Structured Chain-of-Thought (SCoT): reason using explicit program structures:
+- Sequence (ordered steps)
+- Branch (if/else)
+- Loop (for/while)
+
+Three disciplines apply to EVERY step below:
+1. GUARD ANCHORING: whenever you claim a check, bound, or invariant exists, you must QUOTE the exact statement from the given code that enforces it. A bound you cannot quote from the given code (e.g., "the decoder/framework/caller guarantees this") does not exist for purposes of your analysis — record it in notes.assumptions instead of relying on it. Symmetrically, a constraint you believe is enforced "in the caller / decode site / helper not shown" is an assumption and may NEVER be used to dismiss a candidate whose unvalidated value reaches a sink inside this code.
+2. EDGE TESTING: whenever you evaluate a guard or a sink, test it against the boundary values of the data reaching it (0, -1, empty, exactly-at-limit, one-past-limit, sign-flipped, truncated or widened across a type boundary, min/max of its declared width) — not just typical values. Off-by-one defects live at exactly these values.
+3. ATTACKER AND IMPACT MODEL: an attacker is a party at a DIFFERENT privilege or across a service boundary from the code's operator: a network peer, guest/tenant code, an unprivileged user reaching a privileged or shared process, or the originator of untrusted data the code processes (file contents, messages, model/serialized state). A consequence counts as security impact when it crosses that boundary: memory corruption, out-of-bounds read with disclosure potential, injection, authn/authz bypass, crypto verification bypass, or attacker-scalable amplification (one small input producing unbounded work or retention). A consequence that ONLY terminates the process, triggered by input from a party who already controls that process at equal privilege (e.g., a user running an unprivileged CLI tool on their own arguments and files, and the worst outcome is a crash of that same process with nothing written, disclosed, or amplified), is a robustness bug — record it in notes.limitations, not as a vulnerability.
+
+Perform the following SCoT procedure, writing each step with numbered program-structure labels:
+
+STEP 1 — SEQUENCE: Input and trust-boundary inventory.
+Enumerate every input this code consumes (parameters, return values of calls, parsed data, globals, configuration). Branch on each:
+- DATA-carrying values (content, sizes, lengths, indices, names, paths, commands, tokens, keys) that originate across a trust boundary — including parameters of a public/exported function, callback, or protocol handler that carry external content — are attacker-influenced. For such entry points the caller is untrusted: the caller controls the CONTENT of those values, and "the caller should have validated" never rejects a candidate whose data-carrying parameter reaches a defective use.
+- INTERFACE-CONTRACT arguments are different: a pointer that is only harmful when the caller passes NULL where the interface documents non-NULL, or a value used only outside the function's documented domain, is a contract question, not attack data. Classify it as "contract".
+For each input record: (a) the exact line where it enters, (b) its declared type and width, (c) the verdict: attacker-data / contract / internal-trusted.
+
+STEP 2 — LOOP: Taint trace with guard verification.
+For each attacker-data input (for each input, follow every path it takes): trace it through assignments, arithmetic, casts, container writes, and pointer arithmetic to every sink (memory access/indexing, allocation sizing, copy/memset/strcpy length, pointer scaling, format strings, command/shell execution, SQL/XPath, file paths, HTML/log/header assembly, outbound URL/host/port, crypto key/nonce generation and signature/MAC verification, authz decisions, loop bounds, free/delete, syscall argument marshalling). At each sink:
+- State the precondition the sink requires (bounds, non-NULL, termination, type/width, canonical form).
+- IF you believe the precondition is enforced: QUOTE the enforcing statement(s) verbatim, and verify (i) the guard lies on EVERY path to the sink, and (ii) it rejects every out-of-range value including the boundary cases above. Watch specifically for: `>` where `>=` is required, unsigned wrap inside the guard's own arithmetic, a check performed on a different variable or in the wrong unit, a check placed after the use, and a check that one branch bypasses.
+- ELSE: record the sink as unguarded. Additionally determine whether this code's OWN data flow can produce the harmful value — unchecked allocation result, lookup that can miss on attacker data, parse that can omit a field or column, arithmetic on attacker sizes — and quote the producing statement.
+
+STEP 3 — LOOP: Candidate generation.
+Collect candidates from STEP 2 plus any other defect you observe: integer overflow/underflow and truncation, off-by-one/boundary errors, signedness and width confusion, buffer size miscalculation (CWE-131), incorrect pointer scaling (CWE-468), use of potentially dangerous functions (CWE-676: memcpy, sprintf, strcpy, gets, popen, rand for security purposes), uninitialized values reaching a use (CWE-457/CWE-908), lifetimes/UAF/double-free, race conditions, fail-open logic and authz gaps, missing signature/MAC/certificate verification (CWE-347), weak primitives or key sizes (CWE-326/CWE-327), predictable salt (CWE-760), insufficient randomness (CWE-330/CWE-338), insecure temporary files (CWE-377), uncontrolled resource consumption (CWE-400, ReDoS CWE-1333), and injection at each sink (command CWE-78, SQL CWE-89, XPath CWE-943, XSS CWE-79, format CWE-134, log CWE-117, header CWE-113, path CWE-22, open redirect CWE-601, SSRF CWE-918).
+
+STEP 4 — BRANCH: Trigger proof with step-by-step simulation (mandatory; apply symmetrically).
+For each candidate: simulate the trigger by walking the code in order, writing the concrete runtime value of every relevant variable at each statement, from the trigger input to the defective statement. A candidate survives only if EVERY precondition of the trigger is instantiated — each must be (i) an input value within this code's actual input surface consistent with the ATTACKER AND IMPACT model, or (ii) a state produced by statements in this code (quote them). Then branch:
+- IF the simulation reaches the defective statement with all values concrete AND the consequence is a security impact per discipline 3, the candidate is a real vulnerability in this code.
+- ELSE IF a trigger precondition can only be met by: (a) a caller or callee violating its documented contract (passing NULL where non-NULL is documented, returning a value outside its contract) — EXCEPT when this code's own flow produces the NULL/value (unchecked allocation, lookup, or parse result quoted in STEP 2); (b) an attacker winning a race whose window you cannot exhibit as two ordered operations in this code with the attacker able to interleave between them; (c) a wrap or width behavior not exercised by the code as written (overflow only at SIZE_MAX-scale values when an earlier quotable check bounds the value below that scale, behavior only on a 32-bit target when the code declares wider types); or (d) the attacker planting a filesystem object (symlink, hardlink, replaced file) at a path this code's own statements never make attacker-writable — then the trigger is SPECULATIVE: it is not a vulnerability in this code; record it in notes.limitations and name the precondition you could not instantiate.
+- ELSE IF the trigger requires only environment/OS/allocation failure no attacker can induce, or produces degradation with no security effect (fixed-constant leak per invocation with no attacker-scalable retention, cosmetic output, style), it is NOT a vulnerability.
+- Never demote to "robustness": memory corruption, out-of-bounds reads with disclosure potential, injection, authn/authz bypass, crypto verification bypass, and attacker-scalable amplification (small input → unbounded work or retention, e.g., catastrophic backtracking, a parse loop bounded only by an attacker count) ARE vulnerabilities whenever the trigger is instantiated and reachable per the ATTACKER AND IMPACT model.
+
+STEP 5 — BRANCH: Counterfactual patch test and re-examination of dismissals (symmetry check).
+LOOP over each surviving candidate: write, in words, the minimal one-line guard that would fix it (e.g., "reject the request if offset + length exceeds the buffer size, before the memcpy"). Then LOOP over the given code, line by line, searching for that exact check on every path to the sink. IF you find it, quote it and mark the candidate NOT real — you misread the code. IF it is genuinely absent, the candidate is confirmed. This test is decisive; perform the search explicitly.
+LOOP over each candidate you are about to dismiss, and branch on the dismissal reason:
+- IF dismissed because "the caller / external component is responsible": IF this code is the intake point for data crossing a trust boundary (it parses the file, decodes the message, receives the guest command, implements the public API), missing validation IS the vulnerability — do not defer it.
+- IF dismissed because "the value is bounded by construction / by the framework / by the decode grammar / by code not shown": the dismissal is INVALID — per GUARD ANCHORING an enforcement you cannot quote does not exist. If the unvalidated value reaches a memory, index, size, or injection sink in this code, restore the candidate and prove its trigger.
+- IF dismissed because "no caller is visible / reachability unprovable": judge by the values the function consumes — if its parameters can carry external content (parsed data, indices, names, sizes, paths), treat them as attacker-data per STEP 1 and run the STEP 4 simulation; "constraints are applied at the decode site (not shown)" is never a valid dismissal.
+- IF dismissed because "it's only a logic/fail-open/robustness issue": fail-open defaults, error paths that let unvalidated values through, authorization gaps, and attacker-influenced uninitialized values that reach output, comparisons, or control flow ARE vulnerabilities.
+- IF dismissed because "worst case is a crash": keep this dismissal when the trigger is speculative under STEP 4, or when the crash is confined to the equal-privilege process of the party supplying the input per discipline 3; otherwise it is a denial-of-service vulnerability.
+
+STEP 6 — SEQUENCE: Verdict, CWE, and localization.
+- Rank the surviving candidates: a candidate is PRIMARY when its trigger was fully instantiated in STEP 4 and its consequence is material per discipline 3. Decide vulnerable true/false from PRIMARY candidates only; a single surviving primary candidate suffices — do not require multiple findings. Candidates marked speculative in STEP 4 must never flip the verdict, appear in evidence, or drive the CWE.
+- CWE: list ONLY the CWE naming the root cause of the PRIMARY defect, most specific form first, maximum 2 entries. Mapping rules — follow them exactly:
+  - Out-of-bounds READ → CWE-125 first (CWE-129 or CWE-476 only as the second entry if index/NULL handling is the cause). Out-of-bounds WRITE → CWE-787 first; classic overflow through a dangerous function → CWE-120/CWE-676.
+  - SSRF (attacker-controlled URL/host/port of an outbound request) → CWE-918, never CWE-20. XPath injection → CWE-943, never CWE-89. SQL injection → CWE-89.
+  - HTTP response/header splitting → CWE-113; log forging → CWE-117; open redirect → CWE-601; missing authorization → CWE-862/CWE-863; incorrect file permissions → CWE-732.
+  - Predictable/constant salt → CWE-760; predictable nonce/key material or weak randomness → CWE-330/CWE-338; deprecated/broken primitive (MD4, DES, RC4) → CWE-327; insufficient key size → CWE-326; missing signature/MAC verification → CWE-347.
+  - Buffer size miscalculation → CWE-131; insecure temp file → CWE-377; catastrophic-backtracking ReDoS → CWE-1333; other unbounded consumption → CWE-400; pointer scaling → CWE-468.
+  - Use CWE-20 only when no more specific class names the defect. Do not pad with consequence CWEs (privilege escalation, information disclosure as effects) or hardening advice.
+- Localization: for each confirmed finding, emit one evidence entry whose location is the minimal contiguous range (typically 1-5 lines) anchored on the faulty statement — the sink, the unvalidated use, or the missing-check site — containing only statements on that candidate's data-flow path. If the tainted value originates in a distant statement, add one additional evidence entry anchored on that origin line. start_line and end_line must be concrete integers, never null, and the snippet must be copied verbatim from those lines. Then RECOUNT: treat the first line of the given code as line 1, count down to your range, and verify your snippet appears at exactly those lines; if the recount disagrees, correct the numbers before emitting JSON. Every evidence entry must map to a surviving primary candidate; never attach tangential evidence, dead helpers, or dismissed/speculative candidates.
+
+Rules:
+- Base reasoning only on the given code; anything enforced outside it is an assumption, not a fact. Judge this code as the last line of defense for the data-carrying values it consumes at its own entry points, while reserving contract arguments for the STEP 4 contract branch.
+- Verify each claimed guard by quoting and edge-testing it (STEP 2), and each confirmed defect by actually failing to find its fix in the code (STEP 5). Apply both verifications symmetrically — a defect is real only if its guard is truly absent AND its trigger fully instantiated; safe code is safe only if its guard is truly present.
+- Follow actual control flow (paths, checks, state changes).
+- Focus on security-relevant behavior (memory safety, bounds, lifetime, input validation, integer safety, injection, authz/authn, crypto, trust-boundary validation, fail-open error handling, attacker-reachable denial of service and resource amplification).
+- Do NOT rewrite or modify code.
+- After reasoning, output ONLY the JSON object described below. The JSON object must be the last thing in your output and must be strictly valid: no markdown fences, no trailing commas, no comments, every field present — "evidence" and "notes" must appear even when their arrays are empty. If your reasoning runs long, compress the STEP text — never omit, truncate, or malform the JSON.
+
+Output format requirements:
+- First: write your SCoT reasoning in plain text with numbered steps (STEP 1 through STEP 6), labeling sequences, branches, and loops explicitly, and quoting the exact code lines whenever you claim a guard exists or a defect is present. In STEP 4, show the simulated runtime values at each statement of each trigger.
+- Then: output exactly one JSON object (no markdown fences, no extra text).
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+When vulnerable is true, "evidence" MUST contain at least one entry with concrete integer start_line/end_line, a verbatim snippet from those lines, and a reason naming the root cause and the instantiated trigger. When vulnerable is false, "evidence" may be empty and dismissed or speculative candidates from STEP 4 belong in notes.limitations.
+
+Code:
+{{CODE}}

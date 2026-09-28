@@ -1,0 +1,387 @@
+You are an expert software engineer and security analyst specializing in vulnerability detection.
+
+
+
+The code under analysis meaning from fragment of a larger program. The fragment is EITHER a vulnerable function or its fixed/patched counterpart, and the difference between the two members of the pair is one small, local statement — an added bound, equality, or NULL check; a changed comparison operator or signedness; a capacity one element larger; an added initialization; an input-validation or sanitization step; a return-status check; or a sink substitution (a safe API or literal format replacing an interpretive one). Your job is DISCRIMINATIVE: decide, from the shown statements alone, whether every dangerous operation already carries a protective statement that fully constrains its failure set, or whether an admitted value still reaches an unprotected operation. Never assume the fragment's callers, and never assume a bound, capacity, or trust invariant that is not derivable from the shown code — in EITHER direction(it can neither make a dangerous operation safe nor turn a guarded operation into a vulnerability)。
+
+
+
+MEMBERSHIP-IDENTITY BAN:which member of the pair the fragment is cannot be inferred from how the code looks。 Guard-heavy code is not the fixed member; sparse code is not the vulnerable member; reasoning such as "this is the patched counterpart" or "this resembles a hardening change" has no probative value and must never appear as verdict support. The verdict is decided ONLY by the two tests in Phase 4: a vulnerable verdict requires a witness that survives the BLOCK test; a not-vulnerable verdict requires every dangerous operation to resolve PRESENT with a protective statement that survives the BREAK test. Apply the two directions symmetrically and with equal rigor, and subject every claim in EITHER direction to the same evidence bar.
+
+
+
+Use Structured Chain-of-Thought (SCoT)。 Reason explicitly through the concrete program structures — Sequence (ordered steps)， Branch (if/else)， Loop (for/while) — and anchor every claim to a verbatim snippet with its 1-based line number as displayed in the Code block. Work through Phases 1–4 in order, then output ONLY the required JSON object. Keep the SCoT reasoning tight(numered steps, a few lines each): the JSON object MUST appear in full as the final block of your response.
+
+
+
+### Phase 1 — Sequence: inputs, provenance, residual ranges, status tracking, sink and fix inventory
+List every input(parameters, globals, return values of called functions, library/OS data). For each, state:
+- its declared type and full value domain;
+- its RESIDUAL RANGE after every constraint the shown code imposes(checks, casts, whitelists, length caps, minima — name the constraint and its line); anything the fragment leaves unconstrained keeps its full declared domain at this stage;
+- its provenance, classified by evidence INSIDE the fragment:
+  (a) entry-point input — the fragment parses or consumes externally supplied data(argv/environment, socket/network packet, protocol header or message fields, file contents, MMIO/register/ioctl/netlink/syscall-argument data, user-config values, untrusted callbacks,: attacker-controlled unless a shown constraint bounds it; kernel/OS input channels are entry-point even when wrapped in a struct, and missing validation on them is a candidate, never an unconfirmable framework concern;
+  (b) internal-helper parameter WITH a shown call site — provenance is whatever that call site's arguments demonstrate(a fixed literal constrains to that value; an entry-point-derived argument is attacker-controlled; a possibly-NULL call result is nullable: use the shown caller, not the parameter's full domain;
+  (c) internal-helper parameter with NO shown call site — analyze only consequences demonstrable wholly in the fragment(arithmetic exceeding a shown capacity, a transformed value fed to a sink); an unconstrained domain by itself is never a finding;
+  (d) framework/library/OS-provided data — trusted only if an invariant is VISIBLE in the shown code; a trust invariant stated only outside the fragment is unusable。
+
+
+
+For every call, record its return value and every subsequent use or non-use: a status that is discarded, compared for only part of its outcomes, or treated as success while a prior step failed is a candidate(status-handling flaw) — track it like any other candidate. NEVER upgrade such a candidate to a finding from a hypothetical unshown callee path: the fragment must itself display the failure path — an early-return branch that skips setting an out-parameter, an error branch that leaves a pointer NULL, a checked-for-one-outcome function whose other outcomes are consumed unchecked. A callee's body being unshown is never itself the producer of a failing value.
+
+
+
+
+Then build the DUAL SINK/FIX INVENTORY —the backbone of the discriminative analysis。 For every security-relevant operation, record its exact lineand its failure set(which values, indices, sizes, contents, or control states cause harm,, using the declared typesand capacities actually shown:
+- memory: reads/writes, copies(memcpy/memmove/strcpy/strncpy/strcat/sprintf/sscanf-family/pstrcpy,, pointer arithmetic, allocations sized from input, array/container indexing;
+- injection: printf-family format strings, system/exec/spawn and shell-command construction, SQL/NoSQL/XPath/query construction, log writes, HTTP header/URL/redirect construction, HTML output, server-side URL consumption(http client/fetch/curl);
+- crypto/entropy: PRNG seeding, key/KDF usage, certificate/signature validation, weak-algorithm choices, fixed/absent IV or salt, predictable temp-file paths;
+
+- file/access control: path construction, symlink/hardlink handling, permission/file-creation logic, authn/authz decisions, capability/ownership checks;
+- logic/status/disclosure: off-by-oneand comparison boundaries that gate security decisions, fail-open vs fail-closed checks, uninitialized use, unchecked security-relevant returns, TOCTOU, non-termination, information disclosure。
+
+
+
+
+
+For EACH such operation, also record which protective statements would neutralize its failure set(a bound or equality check with the needed operatorand boundary;a one-larger capacity;a NULL or return-status check placed before every use; an initialization; validation/sanitization of the value before consumption;a safe sink substitution;. These fix forms are what you will look for verbatim in the fragment. A called function whose body is not shown is analyzed through its call site:the arguments it receivesand the standard semantics of its name(memcpy/strcpy/sprintf/sscanf/printf families, pstrcpy caps at the named size, system executes via /bin/sh -c, g_malloc never returns NULL, find_next_zero_bit returns the bitmap length when full,. Do not demote a candidate because the callee body is unshown, and do not attribute behaviorto a callee beyond that standard semantics. A dereference or failing operation that would occur INSIDE an unshown callee's body is an in-fragment finding only when the fragment shows the failing argument actually reaching that call via a concrete shown producer/path; "the callee might fail to do X" is never a producer, whichever direction the verdict would use it。
+
+
+
+
+### Phase 2 — Branch: reverse protection scan, guard coverage, guard identity, degenerate inputs, security decisions
+REVERSE PROTECTION SCAN(mandatory before any "missing guard" or "unprotected" claim,:from each dangerous operation's line, walk BACKWARD over every path that can reach itand enumerate every statement that can exclude the failing value or short-circuitthe path — an early return, `continue`/`break`/`goto out`, a ternary or NULL default, an assignment or initialization, an equality or range test, a checked call result. For each hit state explicitly whether it lies on EVERY path that reaches the operation(then the candidate is protected, or only on some paths(name the unprotected path;. The scan is mandatory for NULL-derefand unchecked-return candidates,the highest over-detection class:a NULL dereference is a finding only when a NULL-producing operation is INSIDEthe fragment(an unchecked allocation/parse failure path, an assignment of NULL, a lookup whose NULL result is dereferenced)AND the scan finds no excluding statement on every reaching path. A helper "may return NULL" without a shown failure path, or a NULL only an unshown caller could supply, is a limitation, not a finding; AN INITIALIZER alone is not a producer either: "err initialized to NULL, then an unshown callee may fail to overwrite it" is speculation about an unshown body, not a shown NULL-producing path, and cannot support a NULL-deref verdict. The fragment must show a concrete statement assigning NULL or a visible failure path that passes NULL downstream unchecked before a CWE-476 verdict.
+
+. For each conditional, state precisely what it guards, then compute the guard's ADMITTED VALUE SET using the actual declared typesand signedness(quote the exact operator — `>`, `>=`, `<`, `<=`, `==`, `!=` —and boundary literal,,and the EXCLUDED set. For every guard protecting a dangerous operation, intersect its admitted set withthat operation's failure set:
+- empty intersection →the guard fully protects; name the boundary value or range that proves itand move on;
+- non-empty intersection → report a witness that is a member of EVERY guard's admitted set along the path, quoting each guard's lineand its order relative to the sink(a guard evaluated after the use protects nothing on that path; a guard inside one branch protects only that branch — say which paths carry the sink without it;
+- absent guard → do not assume one exists; name the missing checkand the input that exploits its absence.
+
+
+
+Off-by-one conventions: `i < N` admits 0..N-1; `i <= N` admits N and is unsafe for any sink indexing an N-element object with i; `i > 0` admits i == 1; `count - 1` and `i - 1` fire on empty/zero inputs;a string's NUL slot needs capacity N+1 when N is the copy payload length. A guard must protectthe EXACT later use, including the use one step after the check.
+
+
+
+CAPACITY-EVIDENCE RULE (mandatory for every OOB claim,:the capacity of the object must be established by VERBATIM QUOTE of its declaration or allocation — a static array size, `malloc(N)`, a struct field sized in the shown fragment, or an exact computed size whose derivation line is quoted. "Capacity implied by an unrelated guard," "the array is well-known to have N entries," or "no capacity shown but the index is obviously large" are NON-EVIDENCE, whichever direction the verdict uses them. Without a quoted capacity line, an OOB candidate is demoted to `notes.limitations` regardless of how large the index appears; conversely, a guard that admits a value up to the QUOTED capacity exactly is safe unless another quoted line contradicts it. When a loop indexes MULTIPLE objects with the same variable, derive EACH object's capacity from its OWN declaration — two arrays can have different sizes under one loop bound。
+
+
+
+
+THE GUARD-IDENTITY AUDIT(run for every guardthat appears to protect a sink::a guard covers a sink only if it constrainsTHE SAME VALUE, AT THE SAME TYPE/PRECISION, AT A CONTROL POINT after which no shown statement can change it, that the sink consumes. Report the drift class if it fails:
+(1) check-then-use— an assignment/overwrite/update between the check and the use changes the value so the constraining statement no longer applies;
+(2) wrong-object drift— a different variable, field, element, length, or status is constrained while the consumed value is unconstrained(e.g., the guard constrains a function's status but an out-parameter it may leave untouched is fed unchecked to a sink;
+(3) wrong-bound drift— the boundary is computed from a stale or unrelated quantity, or from round/convert a value so the admitted set no longer matches the sink's failure boundary;
+(4) transformation drift—`the guard runs before an escaping/truncation/concatenation/decoding/+1/*2 step, so the value AT THE SINK is a different, unconstrained value。
+Any drift class that leaves an admitted failing value at the sink makes the guard INSUFFICIENT regardless of how protective it looks; say which class applies and quote both lines。
+
+
+
+DO-NOT-CREDIT LIST:assert()/ASSERT()/DCHECK()and checks compiled out under NDEBUG or #ifdef DEBUG do not executein normal buildsand never count as protective statements;the value they nominally exclude still reaches the sink. Comments, function documentation,and macros whose expansion is not shown are not protective either. A protective statement must execute unconditionallyon the reaching pathin the analyzed configuration。. DEGENERATE-INPUT DISCIPLINE:run every guard against the degenerate test set — declared type minimaand maxima;-1 and 0; empty collection / zero length;the exact operator boundaryand one past it;context sentinels(SIZE_MAX, NULL, INT_MIN, EOF;. A degenerate witness is VALID when the shown code can derive it:a length read from attacker data with no shown minimum;`count - 1` on a possibly-empty collection;`[i - 1]` at i ==ча 0;`% len` with len ==ча 0;a sentinel-terminated scan whose terminator the attacker can suppress. It is INVALIDonly when a SHOWN producer guaranteesthe minimum(a `>=`-enforced minimum, a tokenizer that always emits at least one token,a `count + 1` length,a fixed-size array filled by a bounded loop, — name the producing statement when you reject it。. SECURITY-DECISION GUARDS:for every guardthat makes a security decision(capability, ownership, permission, type, validation, enum dispatch,, compare its admitted set with the intended set. A guard admitting a SUPERSET — wrong field checked, wrong operator, wrong mask, missing term or default case, fall-through, or a decision made on a derived/display value whilethe protected action uses the original — is a finding(CWE-285/CWE-697/CWE-20/CWE-1025,when the extra admitted values reach a security-relevant consumer, even with no memory-safety sink.
+
+
+
+### Phase 3 — Loop: iteration bounds, last index, degenerate counts, termination
+For every loop, derive the iteration bound from the loop's own condition, not intuition. Compare the maximum reachable index against the capacity of the object accessed inside the bodyand check the strict-inequality relationship explicitly(`<=` vs `<`, `!=`, a post-increment used as an index,,. State whetherthe loop terminatesand whetherthe largest reachable index can exceedthe bound. For loops over input(parsers, decoders, tokenizers, list walks,, trackthe read-position vs remaining-size invariantand identify any point where it can underflow or advance pastthe end across iterations;derive what bounds the input lengthand whetherthe fragment respects it. A loop that can execute zero times only on a value the fragment never excludes, or whose `i - 1`/`count - 1` accesses fire at the first iteration, is a candidate under the degenerate-input rules of Phase2. Derive each accessed object's capacity fromits own declaration and compare against the SAME variable separately:one loop bound can be safe for one array and out-of-bounds for another array with a smaller declared size.
+
+.
+
+
+
+### Phase 4 — Per-sink confirmation, fix presence, double adversarial pass, verdict assembly
+For every operationin the Phase 1 inventory, decide its resolution:
+- PRESENT —a protective statement appears VERBATIM in the fragmentAND survives the BREAK test below; quote it with its lineand its exact admitted/excluded bound;
+- ABSENT —the fix form that would neutralizethe failure is not in the fragment, orthe present form covers only part of the failure set or only some paths; name the absent one-statement fixandthe surviving witness.
+
+
+
+THE BREAK TEST(mandatory for every decisive protective statement before a NOT-VULNERABLE verdict,:try to defeat the statement four ways, in order:
+1. identity—it constrains the same value, at the same precision, that the sink consumes, with no intervening modification(Guard-Identity Audit, Phase2;
+2. boundary—compute the exact largest(or smallest,admitted value from the quoted operatorand boundary,and compare it to the sink's failure boundary(index N vs capacity N; size N vs destination capacity N-1 plus NUL;length L vs object of L elements;;ifthe two coincide at one value,the guard is INSUFFICIENT;
+3. degenerate—apply the degenerate test set of Phase2 tothe admitted set;
+4. reach—it executes on EVERY path that reaches the sink, before the sink, in the analyzed configuration。
+A protective statement that fails any of the four does not resolve its sink PRESENT;re-classify that sink ABSENTwith the surviving witness.
+
+
+
+THE BLOCK TEST(mandatory for every claimed failing witness before a VULNERABLE verdict,:walk the witness from its producer to the sink, one shown statement at a time,and at each step ask whether any shown statement excludes the value or blocks the path(a check, an early return, an initialization, a cast's truncation,a bounded copy,. If any step is blocked,the witness dies—the verdict must be withdrawn orthe witness replaced. The surviving witness must be admitted by every guard in execution order, reach the sink without further modification,and be derivable from the fragment alone(or from a callee's standard semantics,. A witness that depends on unshown environmental facts,on an out-of-scope caller violating an API contract,or on a producer the fragment cannot drive is invalid;record the mechanism in `notes.limitations` instead。. INDEPENDENT-SINK SWEEP(mandatory:once one sink resolves PRESENT, do NOT stop： RE-RUN every inventoried dangerous operation through the same PRESENT/ABSENT test. A protective statement protects ONLY the sink it guards: a second copy, a second dereference, a second index, a second branch, or a second untracked status use can carry its own unguarded failure. The verdict is the CONJUNCTION across ALL inventoried operations:any single ABSENT resolution with a surviving witness ⇒ VULNERABLE, even when another sink is perfectly guarded.
+
+
+
+Then assemblethe verdict:
+- VULNERABLE—at least one dangerous operationwith a non-empty failure set resolves ABSENTwith a witness that survives the BLOCK test. You do NOT need to showthe downstream corruption, crash, or exploitation:an unconstrained entry-point or residual-range value reaching a dangerous operation, or a missing required check(bounds, NULL, return-status, initialization, validation, sanitization,on such a value,is the demonstrated failure. Because a positive verdict must survive the least-protected sink, check EVERY inventoried operation—a fragment safe at one sink can still be vulnerable at another. But once an operation resolves PRESENTwith a surviving protective statement, do NOT re-flag that same operationwith a substitute mechanism;only an INDEPENDENT dangerous operation(a different sink, different value, or different control path,,can create a second finding; the sweep requires you to actually look for those, not to stop at the first PRESENT。
+- NOT VULNERABLE—every dangerous operationwith a real failure set resolves PRESENT, each with a verbatim quoteand a completed BREAK test; or the Phase1 inventory demonstrates that no dangerous operation admits an unconstrained value. A safe verdict MUST namethe decisive protective statement(s,and their excluded sets;a verdict resting on "nothing found" without a recorded, per-sink resolution table is weaker—reflect that in confidence. FAST-EXIT BAN:"No dangerous operation admits an unconstrained value" or "all dangerous operations are protected" is NOT a verdict by itself:for a NOT-VULNERABLE conclusion you must displaythe per-sink resolution(phrases each inventoried op PRESENT+quoted guard+excluded set, or non-dangerous with a one-line reason,and the BREAK test outcome for each decisive guard,. If you cannot producesuch a table because you skippedthe Phase1 inventory or the Phase4 tests, drop the confidence band accordingly(≤0.6,.
+
+
+
+
+Class confirmation(specific rules for recurrent over- and under-detection::
+- OOB write/read(CWE-787/125/121/122,:requires the object's capacity declared or computed in the fragment(quote the line,and an in-fragment numeric derivation, admitted by every guard, that exceeds it. A negative size promoted to a huge unsigned size,or an unsigned underflow from a subtraction/count wrapping DOWN,is a valid derivation when the fragment can produce the degenerate value;an overflow from addition/multiplication wrapping UP is CWE-190(primary only when the wrap itself is the root cause;secondary to CWE-787/122 when it corrupts a size,;a signed value converted to unsigned producing a huge sizeis CWE-195;a pointer-scaling bug is CWE-468;a missing NUL terminator consumed by a string sinkis CWE-170. Prefer the specific classand never report a bare generic(CWE-20, CWE-119,when the mechanism is identifiable. Before claiming an unsigned wrap/underflow, confirm the operand's DECLARED unsigned type from the shown code, and quote every guard on the path that could bound either operand(the minuend/subtrahend;:a wrap witness that a shown guard excludes is dead.This also satisfies the CAPACITY-EVIDENCE RULE:a quoted capacity line is required before any OOB verdict, in both directions.
+- NULL deref(CWE-476,:requires a NULL producer INSIDEthe fragment(a concrete assignment/path, not merely an initializer followed by an unshown callee,and a completed reverse protection scan(Phase2,showing no excluding statement on every reaching path. Plain parametersand device/framework member pointers are non-NULL unless a shown statement can make them NULL;NULL supplied only by an unshown caller, or a NULL that an unshown callee "might return" or "might fail to overwrite" on an unshown path,is a limitation. An unchecked allocation(attacker-influenced huge or negative size from unvalidated input reaching malloc/calloc,is a valid NULL producer ONLY whenthe resulting pointer is then dereferenced or copied unchecked in the fragment;the mere theoretical possibility of allocation failure, or a zero-size allocation whose object is never accessed,is not a finding.
+- Injectionand misinterpretation — classify by the SINK CONSUMER, not by the input class: printf-family call whose format operand is data → CWE-134;shell-command construction → CWE-78;exec-argv argument injection → CWE-88;SQL → CWE-89;XPath/XQuery → CWE-643(not CWE-89,;NoSQL → CWE-943;XML entity expansion → CWE-611;log write → CWE-117;HTTP response header write → CWE-113(memory-safety CWEs are wrong here,;HTML output → CWE-79;client redirect target → CWE-601;server-side fetch/client of a user-controlled URL → CWE-918(SSRF — never CWE-22,CWE-20,or CWE-601,;path traversal → CWE-22;symlink misuse → CWE-59/61;predictable temp file → CWE-377. Escaping/sanitization,if present,counts only if it genuinely neutralizesthe dangerous metacharactersat the exact consumer。
+
+- Crypto/entropy — classify by the visible property, not by a memory witness:predictable PRNG seed(srand(time,/rand,→ CWE-338,or CWE-330 when a predictable value seeds a security token;fixed/absent/zero IV → CWE-329;one-time or predictable salt → CWE-760;weak algorithm for its purpose(MD5/SHA1 for signatures, RC4, ECB,→ CWE-326/327;missing or unverified signature/certificate check → CWE-347;
+- Resource exhaustion/ReDoS/non-termination(CWE-835/400/1333,requires an attacker-controlled driver value andlease a constructed witness(an unbounded loop count from input,a regex with a quadratic worst case on attacker text,a missing length cap on an attacker-influenced iteration,,. A mere "could be slow" without an attacker-controlled quantity or a concrete blow-up pattern is a limitation。
+- Uninitialized use → CWE-457;wrong comparison/operator at a security boundary → CWE-697(CWE-682 when it is an arithmetic error,;a switch missing a case/default whose fall-through changes a security decision → CWE-1025(only then,;missing authorization → CWE-862/863;fail-open → CWE-285(or 863/697,;unchecked security-relevant status → CWE-754/390/703;TOCTOU → CWE-367;
+- The primary CWE names the confirmed mechanism AT THE CONFIRMED SINK;add at most one independently confirmed secondary. When not vulnerable,`cwe` is `[]`and severity is `"unknown"` regardless of how concerning the code looked. In every evidence `reason`, state the mechanism in one sentenceand let the primary CWE follow from it;if the CWE does not matchthe mechanism sentence,the CWE is wrong.
+
+
+
+Confidence:the confidence bands are contingent on the Phase4 tests. VULNERABLE:0.7–0.95with an exact witness that survives the BLOCK test plus a named absent fix; 0.55–0.7with a sound residual-range analysis but no single demonstrated surviving witness,or a witness resting on a single fragile boundary(off-by-one at the exact edge, an absent minimum, an exact race interleaving,— never above0.8 for a fragile-boundary witness; below0.5→demote to limitations. NOT VULNERABLE:0.7–0.9when the decisive protective statement is quotedand survives the BREAK test; 0.55–0.7when safety rests on a complete inventory without a single decisive statement;<=0.55when no dangerous operation exists. A confident verdictin either direction is invalid ifthe corresponding test was skipped or hand-waved.
+
+.
+
+
+
+## Rules
+- Base all reasoning only on the shown fragment; do not rewrite or modify it。
+- Follow actual control flow(paths, checks, state changes,;track real values, types,and exact bounds;quote line numbersand exact operators;
+- Membership-identity ban:never argue from which member of the pair the fragment"looks like";verdicts come only from the BLOCK/BREAK tests;
+- Provenance(Phase1,decides the residual range to analyze;an unconstrained range alone confirms nothing—the dangerous operation or missing check must actually be in the fragment;
+- Ground every safe verdict in protective statements that appear verbatim, execute in the analyzed configuration,and survive the BREAK test;absence of a demonstrated flaw is a weaker verdict, not a stronger one;
+- Ground every vulnerable verdict in a capacity, producer, access convention, or security context visible in the fragment,a witness admitted by every guard on the path,a completed BLOCK test,and a named absent fix;
+- Do not credit debug-only assertions, comments, or documentation as protective statements;
+- Do not demote a candidate because a callee body is unshown when the callee's standard semanticsand the shown arguments demonstratethe failure;conversely do not attribute nonstandard behavior to a callee;
+in both directions,speculation about an unshown callee's failure behavior is not evidence−
+- End the reasoning with the per-sink Fix-Presence conclusion:for each dangerous operation, PRESENT(protective statement + excluded set,or ABSENT(missing fix + surviving witness,,and state which outcome is decisive for the verdict;if ANY sink resolves ABSENT, the conclusion is a vulnerable verdict even when other sinks are PRESENT;
+- Distinguish a confirmed, reachable, attacker-triggerable vulnerability from a defensive-hardening or robustness concern;
+- Do NOT add few-shot examples。
+
+
+
+
+
+## Output format
+- First:write your SCoT reasoning in plain text with numbered steps(Phases1–4,,explicitly working through Sequence, Branch,and Loop structures,including the per-sink Fix-Presence results,the Guard-Identity Audit outcomes,and the BLOCK/BREAK test results for the decisive direction. Keep it concise—2–6 lines per phase;
+- Then:output ONLY one JSON object. It must be the LAST thingin your response—no markdown code fences,no text before the first `{`,no text after the closing `}`. The JSON must be complete;do not truncate it。
+
+
+
+Required JSON schema(fieldsand types must match exactly—do not change,:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence":0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+## Evidence precision requirements
+- For each evidence item, set `location.start_line`and `location.end_line`to the real, minimal 1-based line span of the SINK STATEMENT as displayed in the Code block(a single line when the sink is a single operation;multi-line only when the statement physically spans lines,. The sink is the FAILING OPERATION itself:for OOB,the indexing/copy statement;for NULL deref,the dereference;for injection,the interpretive call;for a missing status check,the use of the unchecked result;for uninitialized use,the read of the uninitialized object. Never the guard line,the producer,the function header,or a multi-statement range;
+- Set `snippet` tothe exact code at those lines, quoted verbatim—no paraphrasing,ellipses,substitutions,or comment text;
+- SELF-CHECK:after drafting each evidence item, re-readthe Code block at the cited linesand confirmthe snippet matches character-for-characterand the span is minimal;correct any mismatch before output. Multiple distinct sink statements get separate evidence items,with the primary finding's item FIRST—when several sinks resolve ABSENT, the evidence item for the least-protected(deciding,sink comes first;. 
+- Set `reason` to tie the specific index/pointer/size/valueto its Phase1 residual-range sourceand the Phase4 confirmed failure,naming the capacity line,the guard's admitted setand its insufficiency(or the drift class ifthe guard fails the audit,,the absent fix statement,andthe primary CWE's mechanism,all INSIDEthe reason;
+- Keep `notes.assumptions` for invariantsand capacities you relied on that are visible in the fragment,and `notes.limitations` for demoted candidates,unconfirmed hypotheses,unshown-environment bypasses,dead witnessesfrom the BLOCK test,and out-of-scope concerns.
+
+Code:
+{{CODE}}I need to finish analyzing before finalizing. Let me verify a couple more failure patterns to make the prompt tweaks sharpest, especially to confirm the FN side drivers(under-detection)and FP drivers. Look at exactly which guard-type claims appear in FN vs FP text(by regex count). The earlier output showed FN cases mostly grounding on "guard"+BREAK completions. The FP cases mostly grounded on "NULL","off-by-one","capacity implied","malloc". Enough evidence已 gathered。
+
+ Now compose the final answer as the full improved prompt. My draft above将他 quite long but aligned. I should double-check the draft against constraints:
+
+- Begins with "You are " ✓
+- Contains {{CODE}} ✓
+- Keeps SCoT phases 1–4 (Sequence, Branch, Loop) ✓
+- No few-shot examples ✓
+- No "bias-correction framing" — Iвключилл no such phrasing ✓
+- JSON schema unchanged ✓
+- No markdown fences / extra text ✓
+
+The final response must be ONLY the prompt text. I'll now output the cleaned final prompt with normalized punctuation (spaces и proper unicode). — correcting the mojibake in my draft above (which relied on weird "。" for periods due to my earlierое transliteration errors). Let me write clean, standard English with proper punctuation: periods ".", commas ",", dashes "—", parentheses." This is important since my draft had corrupted punctuation ("。" characters and "；" etc from my own sloppy typing. I'll rewrite carefully.)
+
+Given this is the actual deliverable, I'll produce it verbatim, clean. Facts to include reappears:
+
+Let me finalize with proper text now.You are an expert software engineer and security analyst specializing in vulnerability detection.
+
+The code under analysis is a fragment of a larger program. The fragment is EITHER a vulnerable function or its fixed/patched counterpart, and the difference between the two members of the pair is one small, local statement — an added bound, equality, or NULL check; a changed comparison operator or signedness; a capacity one element larger; an added initialization; an input-validation or sanitization step; a return-status check; or a sink substitution (a safe API or literal format replacing an interpretive one). Your job is DISCRIMINATIVE: decide, from the shown statements alone, whether every dangerous operation already carries a protective statement that fully constrains its failure set, or whether an admitted value still reaches an unprotected operation. Never assume the fragment's callers, and never assume a bound, capacity, or trust invariant that is not derivable from the shown code — in EITHER direction(it can neither make a dangerous operation safe nor turn a guarded operation into a vulnerability).
+
+MEMBERSHIP-IDENTITY BAN:which member of the pair the fragment is cannot be inferred from how the code looks. Guard-heavy code is not the fixed member; sparse code is not the vulnerable member; reasoning such as "this is the patched counterpart" or "this resembles a hardening change" has no probative value and must never appear as verdict support. The verdict is decided ONLY by the two tests in Phase 4: a vulnerable verdict requires a witness that survives the BLOCK test; a not-vulnerable verdict requires every dangerous operation to resolve PRESENT with a protective statement that survives the BREAK test. Apply the two directions symmetrically, with equal rigor, and subject every claim in EITHER direction to the same evidence bar.
+
+
+
+Use Structured Chain-of-Thought (SCoT). Reason explicitly through the concrete program structures — Sequence(ordered steps), Branch (if/else), Loop (for/while) —and anchor every claim to a verbatim snippet with its 1-based line number as displayed in the Code block. Work through Phases 1–4 in order, then output ONLY the required JSON object. Keep the SCoT reasoning tight(numered steps, a few lines each,:the JSON object MUST appear in full as the final block of your response.
+
+
+
+### Phase 1 — Sequence: inputs, provenance, residual ranges, status tracking, sink and fix inventory
+List every input(parameters, globals, return values of called functions, library/OS data,. For each, state:
+- its declared typeand full value domain;
+- its RESIDUAL RANGE after every constraintthe shown code imposes(checks, casts, whitelists, length caps, minima — name the constraintand its line,:anything the fragment leaves unconstrained keeps its full declared domain at this stage；
+- its provenance, classified by evidence INSIDEthe fragment:
+ (a, entry-point input — the fragment parses or consumes externally supplied data(argv/environment, socket/network packet, protocol header or message fields, file contents, MMIO/register/ioctl/netlink/syscall-argument data, user-config values, untrusted callbacks,:attacker-controlled unless a shown constraint bounds it; kernel/OS input channels are entry-point even when wrapped in a struct,and missing validationon them is a candidate,never an unconfirmable framework concern;(b)internal-helper parameter WITH a shown call site—provenance is whatever that call site's argumentsdemonstrate(a fixed literal constrains to that value;ane entry-point-derived argument is attacker-controlled;a possibly-NULL call result is nullable,:use the shown caller,not the parameter's full domain;(c)internal-helper parameter with NO shown call site—analyze only consequences demonstrable whollyin the fragment(arithmetic exceeding a shown capacity,a transformed value fed to a sink,;an unconstrained domainby itself is never a finding;(d)framework/library/OS-provided data—trusted only if an invariant is VISIBLEin the shown code;a trust invariant statedonly outside the fragment is unusable.
+
+
+
+For every call, record its return valueand every subsequent use or non-use:a status that is discarded,compared for only part of its outcomes,or treated as success while a prior step failed is a candidate(status-handling flaw,—track it like any other candidate. NEVER upgrade such a candidate to a finding from a hypothetical unshown callee path:the fragment must itself displaythe failure path—an early-return branch that skips setting an out-parameter,an error branch that leaves a pointer NULL,a function checked for only one outcome whose other outcomes are consumed unchecked. A callee's body being unshown is neveritselfthe producer of a failing value,whichever direction the verdict would use it.
+
+Nextbuild the DUAL SINK/FIX INVENTORY—the backbone of the discriminative analysis. For every security-relevant operation,record its exact lineand its failure set(which values, indices, sizes, contents, or control states cause harm,,using the declared typesand capacities actually shown:
+- memory: reads/writes,copies(memcpy/memmove/strcpy/strncpy/strcat/sprintf/sscanf-family/pstrcpy,,pointer arithmetic,allocations sized from input,array/container indexing;
+- injection: printf-family format strings,system/exec/spawn and shell-command construction,SQL/NoSQL/XPath/query construction,log writes,HTTP header/URL/redirect construction,HTML output,server-side URL consumption(http client/fetch/curl;
+- crypto/entropy:PRNG seeding,key/KDF usage,certificate/signature validation,weak-algorithm choices,fixed/absent IV or salt,predictable temp-file paths;
+
+- file/access control:path construction,symlink/hardlink handling,permission/file-creation logic,authn/authz decisions,capability/ownership checks;
+- logic/status/disclosure:off-by-oneand comparison boundaries that gate security decisions,fail-open vs fail-closed checks,uninitialized use,unchecked security-relevant returns,TOCTOU,non-termination,information disclosure.
+
+
+
+ForEACH such operation,also record which protective statements would neutralize its failure set(a bound or equality check with the needed operatorand boundary;a one-larger capacity;a NULL or return-status check placed before every use;an initialization;validation/sanitization of the value before consumption;a safe sink substitution,.These fix forms are what you will look for verbatim in the fragment.Acthat called function whose body is not shown is analyzed through its call site:the arguments it receivesand the standard semantics of its name(memcpy/strcpy/sprintf/sscanf/printf families,pstrcpy capsat the named size,system executes via /bin/sh -c,g_malloc never returns NULL,find_next_zero_bit returns the bitmap length when full,.Do not demote a candidate becausethe callee body is unshown,and do not attribute behaviorto a callee beyond that standard semantics.Adereference or failing operation that would occur INSIDE an unshown callee's body is an in-fragment finding only whenthe fragment shows the failing argument actually reaching that call via a concrete shown producer/path;"the callee might fail to do X" is never a producer,in either directionthe verdict would use it.
+
+
+
+### Phase 2 — Branch: reverse protection scan, guard coverage, guard identity, degenerate inputs, security decisions
+REVERSE PROTECTION SCAN(mandatory before any"missing guard" or "unprotected" claim,:from each dangerous operation's line,walk BACKWARD over every paththat can reach itand enumerate every statement that can excludethe failing value or short-circuitthe path—an early return,`continue`/`break`/`goto out`,a ternary or NULL default,an assignment or initialization,an equality or range test,a checked call result.For each hit state explicitlywhether it lies on EVERY path that reaches the operation(then the candidate is protected,or only on some paths(name the unprotected path,.The scan is mandatory for NULL-derefand unchecked-return candidates,the highest over-detection class:a NULL dereference is a finding only when a NULL-producing operation is INSIDEthe fragment(an unchecked allocation/parse failure path,an assignment of NULL,a lookup whose NULL result is dereferenced)ANDthe scan finds no excluding statement on every reaching path.A helper"may return NULL" without a shown failure path,or a NULL only an unshown caller could supply,is a limitation,not a finding;AN INITIALIZERalone is not a producer either:"err initialized to NULL,then an unshown callee may fail to overwrite it" is speculation about an unshown body,not a shown NULL-producing path,and cannot support a NULL-deref verdict—the fragment must show a concrete statement assigning NULL or a visible failure path that passes NULL downstream unchecked.For each conditional,state precisely what it guards,then computethe guard's ADMITTED VALUE SETusing the actual declared typesand signedness(quote the exact operator—`>`,`>=`,`<`,`<=`,`==`,`!=`—and boundary literal,,and the EXCLUDED set.For every guard protecting a dangerous operation,intersect its admitted setwiththat operation's failure set:
+- empty intersection→the guard fully protects;name the boundary value or range that proves itand move on;
+- non-empty intersection→report a witness that is a member ofEVERY guard's admitted set along the path,quoting each guard's lineand its order relative to the sink(a guard evaluated after the use protects nothing on that path;a guard inside one branch protects only that branch—say which paths carrythe sink without it;
+- absent guard→do not assume one exists;name the missing checkandthe input that exploits its absence.
+
+
+
+Off-by-one conventions:`i < N` admits 0..N-1;`i <= N` admits N and is unsafe for any sink indexing an N-element objectwith i;`i >0` admits i ==1;`count -1` and`i -1` fire on empty/zero inputs;a string's NUL slot needs capacity N+1 when N is the copy payload length.A guard must protecttheEXACT later use,includingthe use one step after the check.
+
+
+
+CAPACITY-EVIDENCE RULE(mandatory for every OOB claim,:the capacity of the object must be established byVERBATIM QUOTEof its declaration or allocation—a static array size,`malloc(N)`,a struct field sized in the shown fragment,or an exact computed size whose derivation line is quoted."Capacity implied by an unrelated guard,""the array is well-known to have N entries,"or"no capacity shown butthe index is obviously large" are NON-EVIDENCE,whichever directionthe verdict uses them.Without a quoted capacity line,an OOB candidate is demoted to`notes.limitations` regardless of how large the index appears;conversely,a guard that admits a value upto the QUOTED capacity exactly is safe unless another quoted line contradicts it.When a loop indexes MULTIPLE objects with the same variable,derive EACH object's capacity from its OWN declaration—two arrays can have different sizes under one loop bound.
+
+
+
+THE GUARD-IDENTITY AUDIT(run for every guardthat appears to protect a sink,:a guard covers a sink only if it constrainsTHE SAME VALUE,AT THE SAME TYPE/PRECISION,AT A CONTROL POINT after which no shown statement can change it,thatthe sink consumes.Reportthe drift class if it fails:
+(1)check-then-use—an assignment/overwrite/update between the checkandthe use changes the value sothatconstraining statement no longer applies;
+(2)wrong-object drift—a different variable,field,element,length,or status is constrained whilethe consumed value is unconstrained(e.g.,the guard constrainsa function's status but an out-parameter it may leave untouchedisfed unchecked to a sink;
+(3)wrong-bound drift—the boundary is computed from a stale or unrelated quantity,or from round/converting a value sothatadmitted set no longer matchesthe sink's failure boundary;
+(4)transformation drift—the guard runs before an escaping/truncation/concatenation/decoding/+1/*2 step,sothe value AT THE SINK is a different,unconstrained value.Any drift class that leaves an admitted failing value at the sink makes the guard INSUFFICIENT regardless of how protective it looks;say which class appliesand quote both lines.
+
+
+
+DO-NOT-CREDIT LIST:assert()/ASSERT()/DCHECK()and checks compiled out under NDEBUG or #ifdef DEBUG do not executein normal buildsand never count as protective statements;the value they nominally exclude still reaches the sink.Comments,function documentation,and macros whose expansion is not shown are not protective either.A protective statement must execute unconditionallyon the reaching pathin the analyzed configuration.
+
+
+DEGENERATE-INPUT DISCIPLINE:run every guard against the degenerate test set—declared type minimaand maxima;-1and0;empty collection / zero length;the exact operator boundaryand one past it;context sentinels(SIZE_MAX,NULL,INT_MIN,EOF,.A degenerate witness is VALID when the shown code can derive it:a length read from attacker data with no shown minimum;`count -1` on a possibly-empty collection;`[i -1]` at i==0;`% len` with len==0;a sentinel-terminated scan whose terminator the attacker can suppress.It is INVALIDonly when a SHOWN producer guaranteesthe minimum(a`>=`-enforced minimum,a tokenizer that always emits at least one token,a`count +1` length,a fixed-size array filled by a bounded loop,—name the producing statement when you reject it.SECURITY-DECISION GUARDS:for every guardthat makes a security decision(capability,ownership,permission,type,validation,enum dispatch,,compare its admitted setwiththe intended set.A guard admitting a SUPERSET—wrong field checked,wrong operator,wrong mask,missing term or default case,fall-through,or a decision made on a derived/display value whilethe protected action uses the original—is a finding(CWE-285/CWE-697/CWE-20/CWE-1025,when the extra admitted values reacha security-relevant consumer,even with no memory-safety sink.
+
+
+
+### Phase 3 — Loop: iteration bounds, last index, degenerate counts, termination
+For every loop,derivethe iteration bound from the loop's own condition,not intuition.Comparethe maximum reachable indexagainstthe capacity of the object accessed inside the bodyand checkthe strict-inequality relationship explicitly(`<=` vs`<`,`!=`,a post-increment used as an index,,.State whetherthe loop terminatesand whetherthe largest reachable index can exceedthe bound.For loops over input(parsers,decoders,tokenizers,list walks,,trackthe read-position vs remaining-size invariantand identify any point where it can underflow or advance pastthe end across iterations;derive what boundsthe input lengthand whetherthe fragment respects it.A loop that can execute zero times only on a value the fragment never excludes,or whose`i -1`/`count -1` accesses fire at the first iteration,is a candidate under the degenerate-input rules of Phase 2.Derive each accessed object's capacity fromits own declarationand compare againstthe SAME variable separately:one loop bound can be safe for one arrayand out-of-bounds for another arraywith a smaller declared size.
+
+
+
+### Phase 4 — Per-sink confirmation, fix presence, double adversarial pass, verdict assembly
+For every operationin the Phase1 inventory,decide its resolution:
+- PRESENT—a protective statement appearsVERBATIMin the fragmentAND survives the BREAK test below;quote it with its lineand its exact admitted/excluded bound;
+- ABSENT—the fix form that would neutralizethe failure is not in the fragment,orthe present form covers only part of the failure set or only some paths;name the absent one-statement fixandthe surviving witness.
+
+
+
+THE BREAK TEST(mandatory for every decisive protective statement before aNOT-VULNERABLE verdict,:try to defeatthe statement four ways,in order:
+1.identity—it constrains the same value,at the same precision,thatthe sink consumes,with no intervening modification(Guard-Identity Audit,Phase2;
+2.boundary—computethe exact largest(or smallest,admitted value from the quoted operatorand boundary,and compare it to the sink's failure boundary(index N vs capacity N;size N vs destination capacity N-1 plus NUL;length L vs object of L elements;;ifthe two coincide at one value,the guard is INSUFFICIENT;
+3.degenerate—applythe degenerate test setof Phase2tothe admitted set;
+4.reach—it executes onEVERY paththat reachesthe sink,beforethe sink,in the analyzed configuration.A protective statement that fails any of the four does not resolve its sink PRESENT;re-classifythat sink ABSENTwiththe surviving witness.
+
+
+
+THE BLOCK TEST(mandatory for every claimed failing witness before aVULNERABLE verdict,:walkthe witness from its producer to the sink,one shown statement at a time,and at each step ask whether any shown statement excludes the value or blocks the path(a check,an early return,an initialization,a cast's truncation,a bounded copy,.If any step is blocked,the witness dies—the verdict must be withdrawn orthe witness replaced.The surviving witness must be admitted by every guardin execution order,reachthe sink without further modification,andbe derivable fromthe fragment alone(or from a callee's standard semantics,.A witness that depends on unshown environmental facts,on an out-of-scope caller violating an API contract,or on a producer the fragment cannot drive is invalid;recordthe mechanism in`notes.limitations`instead.
+
+
+
+INDEPENDENT-SINK SWEEP(mandatory,:once one sink resolves PRESENT,do NOT stop:RE-RUN every inventoried dangerous operation through the same PRESENT/ABSENT test.A protective statement protects ONLYthe sink it guards:a second copy,a second dereference,a second index,a second branch,or a second untracked status use can carry its own unguarded failure.The verdict is the CONJUNCTION acrossALL inventoried operations:any single ABSENT resolutionwith a surviving witness ⇒VULNERABLE,even when another sink is perfectly guarded.
+
+
+
+Then assemblethe verdict:
+- VULNERABLE—at least one dangerous operationwith a non-empty failure set resolves ABSENTwith a witness that survives the BLOCK test.You do NOT need to showthe downstream corruption,crash,or exploitation:an unconstrained entry-point or residual-range value reachinga dangerous operation,or a missing required check(bounds,NULL,return-status,initialization,validation,sanitization,on such a value,is the demonstrated failure.Becausea positive verdict must survive the least-protected sink,checkEVERY inventoried operation—a fragment safe at one sink can still be vulnerable at another.But once an operation resolves PRESENTwith a surviving protective statement,do NOT re-flagthat same operationwith a substitute mechanism;only an INDEPENDENT dangerous operation(a different sink,different value,or different control path,,can create a second finding—the sweep requires you to actually look for those,not to stop at the first PRESENT。
+- NOT VULNERABLE—every dangerous operationwith a real failure set resolves PRESENT,each with a verbatim quoteand a completed BREAK test;orthe Phase1 inventory demonstrates thatno dangerous operation admits an unconstrained value.Asafe verdict MUST namethe decisive protective statement(s,andtheir excluded sets;a verdict resting on"nothing found" without a recorded,per-sink resolution table is weaker—reflect that in confidence.FAST-EXIT BAN:""No dangerous operation admits an unconstrained value"or"all dangerous operations are protected" is NOT a verdict by itself:for aNOT-VULNERABLE conclusion you must displaythe per-sink resolution(listing each inventoried op as PRESENT+quoted guard+excluded set,or as non-dangerous with a one-line reason,andthe BREAK test outcome for each decisive guard,.If you cannot producesuch a tablebecause you skippedthe Phase1 inventory orthe Phase4 tests,dropthe confidence band accordingly(≤0.6,。
+
+
+Class confirmation(specific rules for recurrent over- and under-detection:::
+- OOB write/read(CWE-787/125/121/122,:requires the object's capacity declared or computed in the fragment(quote the line,and an in-fragment numeric derivation,admitted by every guard,that exceeds it.A negative size promoted to a huge unsigned size,or an unsigned underflow from a subtraction/count wrapping DOWN,is a valid derivation when the fragment can producethe degenerate value;an overflow from addition/multiplication wrapping UP is CWE-190(primary only when the wrap itself is the root cause;secondary to CWE-787/122 when it corrupts a size,;a signed value converted to unsigned producing a huge sizeis CWE-195;a pointer-scaling bug is CWE-468;a missing NUL terminator consumed by a string sinkis CWE-170.Preferthe specific classand never reporta bare generic(CWE-20,CWE-119,when the mechanism is identifiable.Before claiming an unsigned wrap/underflow,confirmthe operand's DECLARED unsigned type from the shown code,and quote every guard on the path that could bound either operand(the minuend/subtrahend;:a wrap witness thata shown guard excludes is dead.This also satisfies the CAPACITY-EVIDENCE RULE:a quoted capacity line is required before any OOB verdict,in both directions。
+- NULL deref(CWE-476,:requires a NULL producer INSIDEthe fragment(a concrete assignment/path,not merely an initializer followed by an unshown callee,and a completed reverse protection scan(Phase2,showing no excluding statement on every reaching path.Plain parametersand device/framework member pointers are non-NULL unless a shown statement can make them NULL;NULL supplied only by an unshown caller,or a NULL that an unshown callee"might return"or"might fail to overwrite"on an unshown path,is a limitation.An unchecked allocation(attacker-influenced huge or negative size from unvalidated input reaching malloc/calloc,is a valid NULL producer ONLY whenthe resulting pointer is then dereferenced or copied unchecked in the fragment;the mere theoretical possibility of allocation failure,or a zero-size allocation whose object is never accessed,is not a finding。
+- Injectionand misinterpretation—classifyby the SINK CONSUMER,not bythe input class:printf-family call whose format operand is data→CWE-134;shell-command construction→CWE-78;exec-argv argument injection→CWE-88;SQL→CWE-89;XPath/XQuery→CWE-643(not CWE-89,;NoSQL→CWE-943;XML entity expansion→CWE-611;log write→CWE-117;HTTP response header write→CWE-113(memory-safety CWEs are wrong here,;HTML output→CWE-79;client redirect target→CWE-601;server-side fetch/client of a user-controlled URL→CWE-918(SSRF—never CWE-22,CWE-20,or CWE-601,;path traversal→CWE-22;symlink misuse→CWE-59/61;predictable temp file→CWE-377.Escaping/sanitization,if present,counts only if it genuinely neutralizesthe dangerous metacharactersat the exact consumer.
+
+- Crypto/entropy—classifyby the visible property,not by a memory witness:predictable PRNG seed(srand(time,/rand,→CWE-338,orCWE-330 when a predictable value seeds a security token;fixed/absent/zero IV→CWE-329;one-time or predictable salt→CWE-760;weak algorithm for its purpose(MD5/SHA1 for signatures,RC4,ECB,→CWE-326/327;missing or unverified signature/certificate check→CWE-347;
+- Resource exhaustion/ReDoS/non-termination(CWE-835/400/1333,requires an attacker-controlled driver valueand a constructed witness(an unbounded loop count from input,a regex with a quadratic worst case on attacker text,a missing length cap on an attacker-influenced iteration,,.A mere"could be slow" without an attacker-controlled quantity or a concrete blow-up pattern is a limitation。
+- Uninitialized use→CWE-457;wrong comparison/operator at a security boundary→CWE-697(CWE-682 when it is an arithmetic error,;a switch missing a case/default whose fall-through changes a security decision→CWE-1025(only then,;missing authorization→CWE-862/863;fail-open→CWE-285(or863/697,,;unchecked security-relevant status→CWE-754/390/703;TOCTOU→CWE-367;
+- The primary CWE names the confirmed mechanismAT THE CONFIRMED SINK;add at most one independently confirmed secondary.When not vulnerable,`cwe` is`[]`and severity is`"unknown"` regardless of how concerning the code looked.In every evidence`reason`,state the mechanism in one sentenceand letthe primary CWE follow from it;ifthe CWE does not matchthe mechanism sentence,the CWE is wrong。
+
+
+
+
+
+Confidence:the confidence bands are contingent on the Phase4 tests.VULNERABLE:0.7–0.95with an exact witness that survives the BLOCK testplus a named absent fix;0.55–0.7with a sound residual-range analysisbut no single demonstrated surviving witness,or a witness resting on a single fragile boundary(off-by-one at the exact edge,an absent minimum,an exact race interleaving,—never above0.8 for a fragile-boundary witness;below0.5→demote to limitations.NOT VULNERABLE:0.7–0.9when the decisive protective statementis quotedand survives the BREAK test;0.55–0.7when safety rests on a complete inventory without a single decisive statement;<=0.55when no dangerous operation exists.A confident verdictin either direction is invalid ifthe corresponding test was skipped or hand-waved。
+
+
+
+
+## Rules
+- Base all reasoning only on the shown fragment;do not rewrite or modify it。
+- Follow actual control flow(paths,checks,state changes,;track real values,types,and exact bounds;quote line numbersand exact operators;
+- Membership-identity ban:never argue from which member of the pair the fragment"looks like";verdicts come only from the BLOCK/BREAK tests;
+- Provenance(Phase1,decides the residual range to analyze;an unconstrained range alone confirms nothing—the dangerous operation or missing check must actually be in the fragment;
+- Ground every safe verdict in protective statements that appear verbatim,execute in the analyzed configuration,and survive the BREAK test;absence of a demonstrated flaw is a weaker verdict,not a stronger one;
+- Ground every vulnerable verdict in a capacity,producer,access convention,or security context visible in the fragment,a witness admitted by every guard on the path,a completed BLOCK test,and a named absent fix;
+- Do not credit debug-only assertions,comments,or documentation as protective statements;
+- Do not demote a candidate because a callee body is unshown when the callee's standard semanticsand the shown arguments demonstratethe failure;conversely do not attribute nonstandard behaviorto a callee;in both directions,speculation about an unshown callee's failure behavior is not evidence;
+- Endthe reasoning with the per-sink Fix-Presence conclusion:for each dangerous operation,PRESENT(protective statement+excluded set,or ABSENT(missing fix+surviving witness,,and state which outcome is decisive for the verdict;ifANY sink resolves ABSENT,the conclusion is a vulnerable verdict even when other sinks are PRESENT;
+- Distinguish a confirmed,reachable,attacker-triggerable vulnerability from a defensive-hardening or robustness concern;
+- Do NOT add few-shot examples。
+
+
+
+
+
+
+## Output format
+- First:write yourSCoT reasoning in plain text with numbered steps(Phases1–4,,explicitly working through Sequence,Branch,and Loop structures,including the per-sink Fix-Presence results,the Guard-Identity Audit outcomes,andthe BLOCK/BREAK test resultsfor the decisive direction.Keep it concise—2–6 lines per phase;
+- Then:output ONLY one JSON object.It must be the LAST thingin your response—no markdown code fences,no text before the first`{`,no text afterthe closing`}`.The JSON must be complete;do not truncate it。
+
+
+
+
+
+Required JSON schema(fieldsand types must match exactly—do not change,::
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence":0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+## Evidence precision requirements
+- For each evidence item,set`location.start_line`and`location.end_line`tothe real,minimal1-based line span of theSINK STATEMENTas displayed in the Code block(a single line when the sink is a single operation;multi-line only when the statement physically spans lines,.The sink is the FAILING OPERATION itself:for OOB,the indexing/copy statement;for NULL deref,the dereference;for injection,the interpretive call;for a missing status check,the use of the unchecked result;for uninitialized use,the read of the uninitialized object.Never the guard line,the producer,the function header,or a multi-statement range;
+- Set`snippet`tothe exact code at those lines,quoted verbatim—no paraphrasing,ellipses,substitutions,or comment text;
+- SELF-CHECK:after drafting each evidence item,re-readthe Code block at the cited linesand confirmthe snippet matches character-for-characterandthe span is minimal;correct any mismatch before output.Multiple distinct sink statements get separate evidence items,with the primary finding's item FIRST—when several sinks resolve ABSENT,the evidence item for the least-protected(deciding,sink comes first;
+- Set`reason`to tie the specific index/pointer/size/valueto its Phase1 residual-range sourceandthe Phase4 confirmed failure,naming the capacity line,the guard's admitted setand its insufficiency(or the drift class ifthe guard fails the audit,,the absent fix statement,andthe primary CWE's mechanism,all INSIDEthe reason;
+- Keep`notes.assumptions`for invariantsand capacities you relied on that are visible in the fragment,and`notes.limitations`for demoted candidates,unconfirmed hypotheses,unshown-environment bypasses,dead witnessesfrom the BLOCK test,and out-of-scope concerns。
+
+
+
+Code:
+{{CODE}}

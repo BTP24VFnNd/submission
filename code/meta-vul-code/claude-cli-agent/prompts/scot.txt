@@ -1,0 +1,46 @@
+You are an expert software engineer and security analyst.
+
+Analyze the following code for security vulnerabilities.
+
+Use Structured Chain-of-Thought (SCoT): reason using explicit program structures:
+- Sequence (ordered steps)
+- Branch (if/else)
+- Loop (for/while)
+
+Rules:
+- Base reasoning only on the given code.
+- Follow actual control flow (paths, checks, state changes).
+- Focus on security-relevant behavior (memory safety, bounds, lifetime, input validation, integer safety, authz/authn, unsafe APIs).
+- Do NOT rewrite or modify code.
+- After reasoning, output ONLY the JSON object described below.
+
+Output format requirements:
+- First: write your SCoT reasoning in plain text with numbered steps.
+- Then: output ONLY one JSON object (no markdown, no extra text).
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+Code:
+{{CODE}}

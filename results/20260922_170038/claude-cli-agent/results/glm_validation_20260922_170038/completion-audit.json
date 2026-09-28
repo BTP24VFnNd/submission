@@ -1,0 +1,612 @@
+{
+  "checked_at_utc": "2026-09-23T05:50:34.646763+00:00",
+  "preservation": [
+    {
+      "path": "meta-vul-code/meta-vul/outputs/20260922_170038/iter_000.txt",
+      "original_prefix_preserved": true,
+      "appended_bytes": 0
+    },
+    {
+      "path": "meta-vul-code/meta-vul/outputs/20260922_170038/iter_001.txt",
+      "original_prefix_preserved": true,
+      "appended_bytes": 0
+    },
+    {
+      "path": "meta-vul-code/claude-cli-agent/outputs/opt_20260922_170038_iter0/self-improving/predictions.jsonl",
+      "original_prefix_preserved": true,
+      "appended_bytes": 43895,
+      "already_valid_rerun_indices": [],
+      "new_records": 10
+    },
+    {
+      "path": "meta-vul-code/claude-cli-agent/outputs/opt_20260922_170038_iter0/self-improving/logs.jsonl",
+      "original_prefix_preserved": true,
+      "appended_bytes": 111197
+    },
+    {
+      "path": "meta-vul-code/claude-cli-agent/outputs/opt_20260922_170038_iter1/self-improving/predictions.jsonl",
+      "original_prefix_preserved": true,
+      "appended_bytes": 266078,
+      "already_valid_rerun_indices": [],
+      "new_records": 79
+    },
+    {
+      "path": "meta-vul-code/claude-cli-agent/outputs/opt_20260922_170038_iter1/self-improving/logs.jsonl",
+      "original_prefix_preserved": true,
+      "appended_bytes": 1673234
+    },
+    {
+      "path": "meta-vul-code/meta-vul/optimizer/prompt_optimizer.py",
+      "original_prefix_preserved": true,
+      "appended_bytes": 0
+    }
+  ],
+  "iterations": [
+    {
+      "iteration": 0,
+      "unique_samples": 404,
+      "raw_prediction_records": 414,
+      "scorable": 404,
+      "missing_verdict_indices": [],
+      "scorable_with_schema_warnings": 7,
+      "schema_warning_indices": [
+        110,
+        47,
+        79,
+        221,
+        260,
+        329,
+        253
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 414
+      },
+      "pairwise_accuracy": 19.8,
+      "correct_pairs": 40,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 414
+      },
+      "canonical_usage_missing": 414
+    },
+    {
+      "iteration": 1,
+      "unique_samples": 404,
+      "raw_prediction_records": 420,
+      "scorable": 402,
+      "missing_verdict_indices": [
+        361,
+        375
+      ],
+      "scorable_with_schema_warnings": 15,
+      "schema_warning_indices": [
+        66,
+        12,
+        90,
+        24,
+        112,
+        139,
+        180,
+        182,
+        248,
+        253,
+        183,
+        289,
+        255,
+        353,
+        337
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 420
+      },
+      "pairwise_accuracy": 25.74,
+      "correct_pairs": 52,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 420
+      },
+      "canonical_usage_missing": 420
+    },
+    {
+      "iteration": 2,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 402,
+      "missing_verdict_indices": [
+        250,
+        341
+      ],
+      "scorable_with_schema_warnings": 12,
+      "schema_warning_indices": [
+        13,
+        45,
+        10,
+        132,
+        218,
+        197,
+        242,
+        262,
+        264,
+        277,
+        271,
+        399
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 394,
+        "2": 9,
+        "3": 1
+      },
+      "pairwise_accuracy": 27.23,
+      "correct_pairs": 55,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    },
+    {
+      "iteration": 3,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 403,
+      "missing_verdict_indices": [
+        8
+      ],
+      "scorable_with_schema_warnings": 18,
+      "schema_warning_indices": [
+        77,
+        46,
+        18,
+        55,
+        176,
+        113,
+        242,
+        138,
+        235,
+        267,
+        364,
+        358,
+        302,
+        44,
+        398,
+        344,
+        324,
+        348
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 404
+      },
+      "pairwise_accuracy": 28.71,
+      "correct_pairs": 58,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    },
+    {
+      "iteration": 4,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 404,
+      "missing_verdict_indices": [],
+      "scorable_with_schema_warnings": 8,
+      "schema_warning_indices": [
+        261,
+        225,
+        302,
+        252,
+        311,
+        379,
+        386,
+        349
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 402,
+        "2": 2
+      },
+      "pairwise_accuracy": 31.19,
+      "correct_pairs": 63,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    },
+    {
+      "iteration": 5,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 388,
+      "missing_verdict_indices": [
+        20,
+        35,
+        48,
+        82,
+        101,
+        98,
+        90,
+        102,
+        85,
+        45,
+        44,
+        93,
+        209,
+        288,
+        337,
+        24
+      ],
+      "scorable_with_schema_warnings": 10,
+      "schema_warning_indices": [
+        107,
+        158,
+        234,
+        255,
+        286,
+        318,
+        311,
+        315,
+        373,
+        89
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 375,
+        "2": 29
+      },
+      "pairwise_accuracy": 26.24,
+      "correct_pairs": 53,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    },
+    {
+      "iteration": 6,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 400,
+      "missing_verdict_indices": [
+        103,
+        111,
+        276,
+        274
+      ],
+      "scorable_with_schema_warnings": 14,
+      "schema_warning_indices": [
+        22,
+        67,
+        147,
+        155,
+        233,
+        242,
+        270,
+        267,
+        292,
+        279,
+        317,
+        356,
+        385,
+        395
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 403,
+        "2": 1
+      },
+      "pairwise_accuracy": 31.19,
+      "correct_pairs": 63,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    },
+    {
+      "iteration": 7,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 386,
+      "missing_verdict_indices": [
+        1,
+        173,
+        305,
+        287,
+        347,
+        338,
+        343,
+        329,
+        340,
+        332,
+        310,
+        335,
+        298,
+        339,
+        398,
+        71,
+        341,
+        157
+      ],
+      "scorable_with_schema_warnings": 15,
+      "schema_warning_indices": [
+        35,
+        29,
+        69,
+        95,
+        143,
+        31,
+        111,
+        164,
+        204,
+        93,
+        44,
+        262,
+        263,
+        300,
+        331
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 402,
+        "2": 2
+      },
+      "pairwise_accuracy": 27.72,
+      "correct_pairs": 56,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    },
+    {
+      "iteration": 8,
+      "unique_samples": 404,
+      "raw_prediction_records": 404,
+      "scorable": 403,
+      "missing_verdict_indices": [
+        255
+      ],
+      "scorable_with_schema_warnings": 30,
+      "schema_warning_indices": [
+        46,
+        57,
+        64,
+        47,
+        16,
+        91,
+        9,
+        66,
+        114,
+        142,
+        155,
+        182,
+        174,
+        197,
+        191,
+        139,
+        250,
+        227,
+        267,
+        264,
+        318,
+        321,
+        269,
+        287,
+        357,
+        185,
+        254,
+        379,
+        389,
+        394
+      ],
+      "final_transport_errors": {},
+      "transport_attempt_counts": {
+        "1": 404
+      },
+      "pairwise_accuracy": 28.71,
+      "correct_pairs": 58,
+      "total_pairs": 202,
+      "metrics_match": true,
+      "models": {
+        "z-ai/glm-5.3": 404
+      },
+      "canonical_usage_missing": 404
+    }
+  ],
+  "transcripts": {
+    "iter8-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 38,
+        "thinking_blocks": 14,
+        "tool_calls": 23,
+        "tool_errors": 5
+      },
+      "models": {
+        "z-ai/glm-5.3": 38
+      },
+      "tool_error_types": {
+        "permission/approval": 4,
+        "other": 1
+      },
+      "successful_tools": {
+        "Bash": 18
+      }
+    },
+    "iter7-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 67,
+        "thinking_blocks": 24,
+        "tool_calls": 42,
+        "tool_errors": 11
+      },
+      "models": {
+        "z-ai/glm-5.3": 67
+      },
+      "tool_error_types": {
+        "permission/approval": 6,
+        "other": 5
+      },
+      "successful_tools": {
+        "Bash": 31
+      }
+    },
+    "iter2-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 44,
+        "thinking_blocks": 15,
+        "tool_calls": 28,
+        "tool_errors": 7
+      },
+      "models": {
+        "z-ai/glm-5.3": 44
+      },
+      "tool_error_types": {
+        "other": 1,
+        "permission/approval": 6
+      },
+      "successful_tools": {
+        "Read": 2,
+        "Bash": 19
+      }
+    },
+    "iter5-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 54,
+        "thinking_blocks": 18,
+        "tool_calls": 33,
+        "tool_errors": 10
+      },
+      "models": {
+        "z-ai/glm-5.3": 54
+      },
+      "tool_error_types": {
+        "permission/approval": 7,
+        "other": 3
+      },
+      "successful_tools": {
+        "Bash": 21,
+        "Read": 2
+      }
+    },
+    "evaluator": {
+      "counts": {
+        "files": 3777,
+        "usage_records": 7434,
+        "thinking_blocks": 3820,
+        "tool_calls": 1,
+        "tool_errors": 1
+      },
+      "models": {
+        "z-ai/glm-5.3": 7434
+      },
+      "tool_error_types": {
+        "permission/approval": 1
+      },
+      "successful_tools": {}
+    },
+    "iter4-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 48,
+        "thinking_blocks": 18,
+        "tool_calls": 29,
+        "tool_errors": 10
+      },
+      "models": {
+        "z-ai/glm-5.3": 48
+      },
+      "tool_error_types": {
+        "permission/approval": 9,
+        "other": 1
+      },
+      "successful_tools": {
+        "Bash": 16,
+        "Read": 3
+      }
+    },
+    "iter1-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 33,
+        "thinking_blocks": 12,
+        "tool_calls": 20,
+        "tool_errors": 5
+      },
+      "models": {
+        "z-ai/glm-5.3": 33
+      },
+      "tool_error_types": {
+        "other": 1,
+        "permission/approval": 4
+      },
+      "successful_tools": {
+        "Read": 3,
+        "Bash": 12
+      }
+    },
+    "iter6-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 56,
+        "tool_calls": 35,
+        "tool_errors": 6,
+        "thinking_blocks": 20
+      },
+      "models": {
+        "z-ai/glm-5.3": 56
+      },
+      "tool_error_types": {
+        "permission/approval": 5,
+        "other": 1
+      },
+      "successful_tools": {
+        "Bash": 18,
+        "Read": 11
+      }
+    },
+    "iter3-optimizer": {
+      "counts": {
+        "files": 1,
+        "usage_records": 57,
+        "thinking_blocks": 21,
+        "tool_calls": 35,
+        "tool_errors": 7
+      },
+      "models": {
+        "z-ai/glm-5.3": 57
+      },
+      "tool_error_types": {
+        "permission/approval": 6,
+        "other": 1
+      },
+      "successful_tools": {
+        "Bash": 25,
+        "Read": 3
+      }
+    }
+  },
+  "summary_matches_history": true,
+  "best_iteration": 4,
+  "pareto_frontier_iterations": [
+    6
+  ],
+  "best_prompt_matches_iteration": true
+}

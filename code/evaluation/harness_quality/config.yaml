@@ -1,0 +1,13 @@
+harness_quality:
+  enabled: false
+  seed_prompt: self-improving/prompts/iterations/iter_000_scot.txt
+  output_filename: harness_quality.json
+  judge:
+    enabled: true
+    repeats: 2
+    command: [python3, scripts/harness_quality_codex_judge.py]
+    response_files: []
+    temperature: 0
+    timeout_seconds: 300
+    model: gpt-5.4
+    provider: codex-cli

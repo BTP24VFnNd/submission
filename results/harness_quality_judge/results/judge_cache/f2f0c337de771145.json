@@ -1,0 +1,101 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The prompt contains two near\u2011identical large instruction blocks; while they are consistent, the duplication may cause minor confusion when editing or extending the prompt."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "abbee6fd03e08a641d50c8bd76a1519850e4e9bc8d65a3181ecf6c235a0644d8",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:06:01.671293+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 2.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 2.0,
+        "organization_maintainability": 2.0
+      },
+      "weighted_score": 87.5,
+      "critical_failures": [
+        "The prompt concatenates the code placeholder and further instructions without a clear delimiter (\"Code: {{CODE}}You are an expert software engineer ...\"). This makes it ambiguous whether the text after {{CODE}} is part of the code to be analyzed or still instruction, violating the invariant that the supplied code must be treated solely as input."
+      ],
+      "global_ambiguities": [
+        "Ambiguous boundary between the {{CODE}} placeholder and the following instructional text may cause the model to treat post\u2011placeholder instructions as code."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "abbee6fd03e08a641d50c8bd76a1519850e4e9bc8d65a3181ecf6c235a0644d8",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:06:19.594042+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 3.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 3.0,
+    "organization_maintainability": 2.5
+  },
+  "semantic_quality_score": 93.125,
+  "semantic_stability": "unstable",
+  "absolute_total_score_difference": 11.25,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 2.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 2.0,
+    "organization_maintainability": 1.0
+  },
+  "critical_failures": [
+    "The prompt concatenates the code placeholder and further instructions without a clear delimiter (\"Code: {{CODE}}You are an expert software engineer ...\"). This makes it ambiguous whether the text after {{CODE}} is part of the code to be analyzed or still instruction, violating the invariant that the supplied code must be treated solely as input."
+  ],
+  "global_ambiguities": [
+    "Ambiguous boundary between the {{CODE}} placeholder and the following instructional text may cause the model to treat post\u2011placeholder instructions as code.",
+    "The prompt contains two near\u2011identical large instruction blocks; while they are consistent, the duplication may cause minor confusion when editing or extending the prompt."
+  ],
+  "semantic_eligible": false
+}

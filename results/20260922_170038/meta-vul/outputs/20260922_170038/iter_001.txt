@@ -1,0 +1,77 @@
+You are an expert software engineer and security analyst.
+
+Analyze the following code for security vulnerabilities.
+
+Use Structured Chain-of-Thought (SCoT): reason using explicit program structures:
+- Sequence (ordered steps)
+- Branch (if/else)
+- Loop (for/while)
+
+Perform the following SCoT procedure, writing each step with numbered program-structure labels:
+
+STEP 1 — SEQUENCE: Input and trust-boundary inventory.
+Enumerate every input this code consumes (parameters, return values of calls, parsed data, globals, configuration). Branch on each: is it attacker-influenced (anything that crosses a trust boundary: network data, file contents, serialized/model/saved-state data, guest input in emulators, CLI/env arguments, external metadata, strings passed to be rendered as markup) or internal/trusted (values this code itself produced and fully constrains)? Record the verdict for each. Never assume an external input is well-formed just because the code reads it.
+
+STEP 2 — LOOP: Taint trace.
+For each attacker-influenced input (for each input, follow every path it takes): trace it through assignments, arithmetic, casts, and container writes to every sink (memory access/indexing, allocation sizing, copy/memset length, format strings, command execution, SQL, file paths, HTML/Markup assembly, authz decisions, loop bounds, free/delete). At each sink, list the precondition the sink requires (bounds, non-NULL, termination, type/width, canonical form) and check whether THIS code enforces it before the sink. Track all state changes along each path.
+
+STEP 3 — LOOP: Candidate generation.
+Collect candidate issues from STEP 2 plus any other defect you observe (lifetimes, integer overflow/underflow, off-by-one, signedness, type confusion, uninitialized values, race conditions, fail-open logic, authz gaps).
+
+STEP 4 — BRANCH: Trigger proof for each candidate (this step is mandatory; apply it symmetrically).
+For each candidate, construct the minimal concrete trigger: the exact input values or program state, and the exact path through the code, that reaches the defect. Then branch:
+- IF the trigger is reachable using only states and inputs this code itself permits, and the defective value can be produced by data crossing a trust boundary (or by the code's own unvalidated logic), the candidate is a real vulnerability in this code.
+- ELSE IF the trigger requires a precondition this code itself prevents or contradicts, or requires a caller/environment to violate a contract the code documents, the candidate is NOT a vulnerability in this code.
+- ELSE IF the trigger is reachable but only causes robustness degradation with no security impact (unchecked syscall return whose failure needs a broken environment, cosmetic garbage in non-security output, resource leaks with no exhaustion path, style issues), it is NOT a vulnerability — record it in notes.limitations.
+
+STEP 5 — BRANCH: Re-examination of dismissed findings (symmetry check).
+Revisit every finding you are about to dismiss. Branch on why you are dismissing it:
+- IF you dismissed it because "it depends on the caller / external component": check whether the external data crosses a trust boundary that THIS code is responsible for validating at intake (parsed files, guest state, model inputs, network messages, markup-bound strings). Missing validation at such a boundary IS the vulnerability — do not defer it to the caller.
+- IF you dismissed it because "it's only a logic/fail-open issue, not memory safety": fail-open defaults, missing error-path checks that let unvalidated values through, and authorization gaps reachable on an attacker-influenced path ARE vulnerabilities.
+- IF you dismissed it because "exploitability depends on assumptions": keep the assumption in notes.assumptions, but judge vulnerability by whether the defective path exists in this code as written.
+
+STEP 6 — SEQUENCE: Verdict, CWE, and localization.
+- Decide vulnerable true/false from the surviving candidates only.
+- CWE: list ONLY the CWE that names the root-cause defect (e.g., the missing bounds check is CWE-125, not also every consequence CWE). Maximum 2 entries, most primary first. Do not pad with hardening-style or consequence CWEs. Use the standard CWE numbering (CWE-787, CWE-125, CWE-190, CWE-20, CWE-22, CWE-79, CWE-416, CWE-476, CWE-362, CWE-287, CWE-863, etc.) and match the root cause precisely.
+- Localization: for each confirmed vulnerability, emit one evidence entry whose location is the MINIMAL contiguous line range (typically 1-5 lines) containing only the exact faulty statements — the sink, the missing check, or the unvalidated use — not the whole function. Copy the snippet verbatim from those lines. start_line and end_line must be concrete integers, never null. Do not attach tangential evidence (e.g., dead helper functions, unrelated paths); evidence entries must each map to a surviving candidate from STEP 4.
+
+Rules:
+- Base reasoning only on the given code.
+- Follow actual control flow (paths, checks, state changes); verify each claimed guard by reading the branch that performs it before relying on it.
+- Focus on security-relevant behavior (memory safety, bounds, lifetime, input validation, integer safety, authz/authn, unsafe APIs, trust-boundary validation, fail-open error handling).
+- Treat every candidate symmetrically in STEP 4: confirm real triggers, reject unreachable ones. Do not let speculative secondary issues drive the verdict; a confirmed primary finding is sufficient.
+- Do NOT rewrite or modify code.
+- After reasoning, output ONLY the JSON object described below.
+
+Output format requirements:
+- First: write your SCoT reasoning in plain text with numbered steps (STEP 1 through STEP 6), labeling sequences, branches, and loops explicitly.
+- Then: output ONLY one JSON object (no markdown fences, no extra text). The JSON must be strictly valid: every field present, every location numeric or null as the schema allows except start_line/end_line for confirmed findings, which must be integers.
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+When vulnerable is true, "evidence" MUST contain at least one entry with concrete integer start_line/end_line, a verbatim snippet from those lines, and a reason naming the root cause and trigger. When vulnerable is false, "evidence" may be empty and dismissed candidates from STEP 4 belong in notes.limitations.
+
+Code:
+{{CODE}}

@@ -1,0 +1,70 @@
+# Generic base config: model and optimizer_model are intentionally blank, so
+# `discover` refuses to run until both are named on the command line
+# (--model, --optimizer-agent, --optimizer-model). backend and reasoning_effort
+# are filled in from --agent / --optimizer-agent.
+#
+# Sample commands (run from meta-vul-code/):
+#
+#   Claude evaluator, Claude optimizer:
+#     python3 metavul.py discover --agent claude-cli --model claude-opus-4-6 \
+#       --optimizer-agent claude-cli --optimizer-model claude-opus-4-6 \
+#       --config configs/config-titanvul-cweval-generic.yaml
+#
+#   Codex evaluator, Claude optimizer:
+#     python3 metavul.py discover --agent codex --model gpt-5.4 \
+#       --optimizer-agent claude-cli --optimizer-model claude-opus-4-6 \
+#       --config configs/config-titanvul-cweval-generic.yaml
+#
+#   Codex evaluator and optimizer:
+#     python3 metavul.py discover --agent codex --model gpt-5.4 \
+#       --optimizer-agent codex --optimizer-model gpt-5.4 \
+#       --config configs/config-titanvul-cweval-generic.yaml
+#
+#   Inkling-Small on Tinker for both, 10-sample smoke test:
+#     python3 metavul.py discover --agent codex \
+#       --model "tinker/thinkingmachines/Inkling-Small" \
+#       --optimizer-agent codex \
+#       --optimizer-model "tinker/thinkingmachines/Inkling-Small" \
+#       --config configs/config-titanvul-cweval-generic.yaml --limit 10
+
+model:
+  name: ""
+  backend: ""
+  reasoning_effort: ""
+
+optimizer_model:
+  name: ""
+  backend: ""
+  reasoning_effort: ""
+
+decoding:
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 4096
+
+dataset:
+  name: "titanvul_cweval_optimization_val"
+  path: "../../data/titanvul_cweval_optimization_val_uuid.jsonl"
+  code_field: "func"
+  label_field: "target"
+  id_field: "cve"
+
+optimization:
+  max_iterations: 15
+  target_metric: "pairwise_accuracy"
+  patience: 4
+  failure_sample_size: 10
+  seed_prompt: "prompts/iterations/iter_000_scot.txt"
+
+prompts_dir: "prompts/"
+outputs_dir: "outputs/"
+
+agentic:
+  enabled: true
+
+runner:
+  timeout_s: 900
+  retries: 3
+  retry_delay_s: 1.0
+  concurrency: 30
+  skip_existing: true

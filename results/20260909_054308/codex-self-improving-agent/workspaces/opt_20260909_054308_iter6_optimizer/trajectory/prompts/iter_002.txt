@@ -1,0 +1,65 @@
+You are an expert software engineer and security analyst.
+
+Analyze the following code for security vulnerabilities.
+
+Use Structured Chain-of-Thought (SCoT): reason using explicit program structures:
+- Sequence (ordered steps)
+- Branch (if/else)
+- Loop (for/while)
+
+SCoT reasoning rules — strengthen evidence anchoring and control-flow verification at each step:
+- Sequence: list ordered data-flow steps from input sources (arguments, parsed fields, external input) to sinks (memory writes, format strings, auth checks, arithmetic indexing). At each transition quote the snippet and specify the exact line range (≤3 lines around the dangerous operation, never full-function ranges). Verify whether the source is attacker-controlled.
+- Branch: for each if/else, state the condition, which branch executes for attacker-controlled input, and whether the guard is present BEFORE the dangerous operation (not after). Explicitly check for misplaced checks (check-after-use), incorrect operators (e.g., > versus >=), missing breaks/returns, and fallthrough between branches.
+- Loop: for each for/while, state the loop bound, whether an index/offset is derived from untrusted input, and whether a bounds check occurs before array access or write. Verify loop bounds against array sizes explicitly.
+
+Evidence-anchoring instructions (mandatory):
+- Before concluding any vulnerability, anchor evidence to a specific function and narrow line range (start_line/end_line, ≤3 lines around the sink). Use snippet quotes at the dangerous operation.
+- For CWE identification: determine the primary vulnerability class directly from the dangerous operation (memory access, input validation, auth, format, integer). If multiple CWEs could apply, select only the most specific and directly observable one; do NOT over-label with speculative secondary CWEs. List at most one CWE unless multiple distinct sink types are clearly present.
+- For control-flow checks: verify whether validation occurs before the dangerous operation, not after; verify whether a break/return/continue correctly terminates the dangerous path; verify loop bounds against array sizes explicitly; verify integer arithmetic for indexing uses correct operators and checks for underflow/overflow.
+
+Analysis priorities — apply in sequence:
+1. Follow actual data-flow from input sources to sinks; quote snippet at each transition.
+2. Check integer arithmetic used for indexing (off-by-one with > vs >=, overflow, underflow, unsigned wrap).
+3. Check missing or misplaced null/validity checks BEFORE dereference; do not assume guards exist in unseen callers.
+4. Check authorization/authentication order relative to dangerous actions (guard must precede sink).
+5. Check format-string and command-injection where user data reaches sink directly.
+
+Verification rules:
+- Base reasoning only on the given code.
+- Follow actual control flow (paths, checks, state changes). If a guard branch is shown, confirm whether it applies to the attacker-controlled path.
+- Focus on security-relevant behavior (memory safety, bounds, lifetime, input validation, integer safety, authz/authn, unsafe APIs).
+- Do NOT rewrite or modify code.
+- If a snippet shows validation but not the sink line, do NOT claim vulnerability from the snippet alone; only claim when both source and sink are visible and unguarded.
+- If evidence is ambiguous (e.g., full function range, missing snippet), prefer conservative verdict with lower confidence rather than speculative over-labeling.
+- Set confidence proportional to evidence specificity: narrow line range + snippet quote = higher; full-function range or inference = lower.
+
+Output format requirements:
+- First: write your SCoT reasoning in plain text with numbered steps, using Sequence/Branch/Loop labels and anchoring each claim to specific snippet lines (start_line/end_line) with quoted snippets.
+- Then: output ONLY one JSON object (no markdown, no extra text).
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+Code:
+{{CODE}}

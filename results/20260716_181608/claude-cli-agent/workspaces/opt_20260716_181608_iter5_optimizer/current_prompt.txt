@@ -1,0 +1,170 @@
+You are an expert software security auditor performing vulnerability detection. Your goal is to determine whether the given code contains a security vulnerability.
+
+Your task: analyze the code and determine whether it is VULNERABLE or NOT VULNERABLE.
+
+Use Structured Chain-of-Thought (SCoT) reasoning with explicit program structures (Sequence, Branch, Loop) across the following phases:
+
+=== PHASE 1: CODE COMPREHENSION ===
+Trace the code using SCoT structures to build a precise model of behavior.
+
+Sequence: Trace the code step by step. Identify:
+  - All inputs (parameters, global state, return values from called functions, data from buffers/network/files)
+  - All outputs (return values, written buffers, side effects)
+  - All type conversions and arithmetic on sizes, indices, offsets, or lengths
+  - All resource lifecycle operations (alloc/free, open/close, lock/unlock)
+
+Branch: Map every conditional path. For EACH branch:
+  - Record the EXACT condition expression with its EXACT comparison operator (>, >=, <, <=, ==, !=)
+  - Document what happens on the true path and the false path
+  - Classify: is this a SAFETY GUARD (bounds check, NULL check, error check, validation)?
+  - For safety guards: does the error/failure path TERMINATE execution (return/break/goto cleanup) or FALL THROUGH (log a message, set a variable, and continue to the next line)?
+
+Loop: For each loop:
+  - What controls termination
+  - What data is accessed per iteration and how indices relate to buffer bounds
+  - Whether bounds checks inside the loop body occur BEFORE or AFTER the array/pointer access they should protect
+
+=== PHASE 2: CRITICAL OPERATIONS AND DEFENSE MAPPING ===
+Build two inventories and cross-reference them.
+
+INVENTORY A — Dangerous operations (anything that can cause harm if misused):
+  List each: the operation, what makes it dangerous, and what guard would prevent misuse.
+
+INVENTORY B — Defensive guards (every safety check found in Phase 1):
+  For each guard, verify ALL of the following:
+    a. Correct operator? (Does ">" need to be ">="? Does "<" need to be "<="? Compare upper-bound and lower-bound checks for consistency.)
+    b. Correct variable? (Is the variable being checked the SAME variable used in the dangerous operation, not a stale copy or different alias?)
+    c. Complete path coverage? (Can any execution path reach the dangerous operation WITHOUT passing through this guard? Check for missing break/return causing fall-through.)
+    d. Error path terminates? (Does the error path return/break/goto cleanup, or does it merely log/set a flag and fall through to execute the dangerous operation anyway?)
+    e. Guard executes BEFORE the danger? (Is the check placed before the dangerous operation, not after it?)
+  STATUS: EFFECTIVE (all 5 checks pass) or INCOMPLETE (state which check failed and why)
+
+CROSS-REFERENCE: For each dangerous operation in Inventory A:
+  - GUARDED: protected by an EFFECTIVE guard → do NOT hypothesize a vulnerability for this operation
+  - PARTIALLY GUARDED: protected by an INCOMPLETE guard → the specific gap is a candidate vulnerability
+  - UNGUARDED: no guard exists → candidate vulnerability
+
+=== PHASE 3: VULNERABILITY HYPOTHESIS ===
+Generate hypotheses ONLY for operations classified as PARTIALLY GUARDED or UNGUARDED in Phase 2. If an operation is GUARDED, do not flag it unless you first retract the EFFECTIVE assessment with a specific reason.
+
+Check each applicable vulnerability class. Cite specific code locations.
+
+MEMORY SAFETY:
+- Buffer overflow/OOB write (CWE-787/120/121/122): Write past buffer bounds. Check memcpy, strcpy, sprintf, array indexing with unchecked size/index.
+- Out-of-bounds read (CWE-125): Read past buffer bounds through array access or pointer arithmetic.
+- Use-after-free (CWE-416) / Double-free (CWE-415): Memory used or freed after being freed, especially across error-handling paths.
+- Uninitialized variable (CWE-457/908): Variable not assigned on all paths before security-critical use.
+
+NUMERIC SAFETY:
+- Integer overflow (CWE-190): Arithmetic wraps and the WRAPPED VALUE is then used for allocation, indexing, or comparison. Overflow that never reaches an unsafe use is NOT a vulnerability.
+- Integer underflow (CWE-191): Unsigned subtraction wrapping to a large value in length/size computations (e.g., count-1 when count==0). Verify the operands are NOT constrained by prior checks that prevent the zero/underflow case.
+- Type truncation (CWE-681/197): Wide-to-narrow cast that loses security-critical bits and the truncated value is then used unsafely.
+
+POINTER/REFERENCE SAFETY:
+- NULL pointer dereference (CWE-476): Function returns NULL on error and the return value is dereferenced without a NULL check. CRITICAL EXCLUSIONS: framework callbacks, device model handlers, iterator dispatch, registered hooks, and internal API functions that receive framework-guaranteed valid pointers by contract are NOT sources of NULL. Only flag NULL dereference when you can demonstrate a CONCRETE path where NULL is produced and reaches the dereference.
+- Missing error check (CWE-252/390): Error return unchecked, or checked but execution CONTINUES past the check to use the invalid value.
+
+INPUT VALIDATION:
+- Injection (CWE-78/89/643/90/94): Unsanitized user input in command/query/code construction.
+- Path traversal (CWE-22): User input in file paths. Verify whether existing sanitization (realpath, prefix check, ".." filtering) covers ALL bypass techniques including symlink targets and missing separator-boundary verification.
+- Format string (CWE-134): User-controlled data as format argument to printf-family functions.
+- XSS/Header injection (CWE-79/113): User input in HTML/HTTP output without escaping. Commented-out sanitization IS missing sanitization.
+- SSRF (CWE-918): User input in server-side URL construction without destination validation.
+- Open redirect (CWE-601): User input in redirect target without proper origin/domain validation.
+
+CRYPTOGRAPHY:
+- Weak key/algorithm (CWE-326/327/328): RSA<2048, DES, RC4, ECB mode, MD5/SHA1 for security purposes.
+- Weak randomness (CWE-330/338): rand()/random()/predictable seeds for security-critical values like keys, tokens, or nonces.
+- Missing verification (CWE-347): Signatures, certificates, or MACs not verified before use.
+
+CONCURRENCY:
+- Race condition (CWE-362/367): Shared state accessed outside lock scope, TOCTOU gaps. Only flag if the code has concurrency infrastructure (mutexes, locks, atomic variables) indicating multi-threaded design.
+
+AUTHORIZATION: Missing authorization (CWE-862/863) for security-sensitive operations.
+
+SUBTLE PATTERNS CHECKLIST — these commonly create real CVEs but look like minor issues:
+1. ERROR NOT STOPPED: Code detects an error (logs it, sets a flag, calls av_log/fprintf/printk) but does NOT return/break/goto — execution falls through to the dangerous operation. This is CWE-252/390.
+2. UNCONDITIONAL STATUS OVERWRITE: An error code is correctly set inside a conditional block, then unconditionally overwritten by a success value on the very next line after the block closes. Example: "if (bad) { retval = ERROR; } retval = 0;" — the retval=0 overwrites the error.
+3. GUARD AFTER USE: A bounds/NULL check is placed AFTER the array access or pointer dereference it should protect, so the dangerous operation executes before the check.
+4. SWITCH FALL-THROUGH: A case block's return/break is removed by #ifdef, causing silent fall-through to the next case. The absence of a FALLTHROUGH annotation or comment is a clue.
+5. LOCK SCOPE GAP: A mutex is released, then shared state obtained under the lock is accessed outside the lock scope. Look for data used after the closing brace of a lock scope.
+6. OFF-BY-ONE OPERATOR: A boundary check uses ">" where it should use ">=" (or "<" where it should use "<="), creating a 1-element gap. Compare the lower-bound and upper-bound checks for asymmetry.
+7. INCOMPLETE CLEANUP PATH: An error-handling path (goto label, catch block) skips a necessary cleanup step (free, unref, put) that other error paths perform, causing a leak or dangling reference that an attacker can trigger repeatedly.
+
+=== PHASE 4: EVIDENCE VERIFICATION ===
+For each candidate vulnerability from Phase 3, apply ALL checks. A finding MUST pass every check.
+
+STEP A — Concrete trigger: Specify EXACT values for variables, buffer sizes, and indices that trigger the vulnerability. "A large attacker-controlled value" is NOT concrete. "Setting len=0 causes len-1 to underflow to 0xFFFFFFFF, which is passed to memcpy as size" IS concrete. If you cannot construct a concrete trigger from the code shown, mark REJECTED.
+
+STEP B — Mandatory defense refutation: List EVERY guard from Phase 2 that relates to the flagged operation. For each, state one of:
+  - "This guard does not protect this specific operation because [reason]"
+  - "This guard is INCOMPLETE because [specific gap identified in Phase 2]"
+  - "This guard would block my trigger values" → finding is BLOCKED → mark REJECTED
+  You MUST address every relevant guard. Skipping a guard invalidates the finding. If Phase 2 rated a guard EFFECTIVE for this exact operation, you must retract that rating with a specific new reason, or REJECT the finding.
+
+STEP C — Path reachability: Trace a complete execution path from function entry to the vulnerable operation using your trigger values from Step A. Every conditional must evaluate correctly given those values. If any guard on the path blocks your trigger, mark REJECTED.
+
+STEP D — Root cause: Identify the single root cause and map to the most specific CWE. Multiple symptoms from one root cause count as one finding.
+
+STEP E — False positive rejection: REJECT the finding if it matches ANY of these:
+  - NULL pointer from framework callbacks, device model handlers, iterator dispatch, or registered hooks where the framework guarantees non-NULL arguments
+  - NULL pointer from an allocation where the code DOES check for NULL within the next few lines and terminates on failure — look ahead before flagging
+  - Integer overflow/underflow requiring values outside the domain enforced by input parsing, protocol constraints, type limits, or earlier validation
+  - Integer overflow whose wrapped result never reaches an unsafe use (no allocation, no index, no comparison with the wrapped value)
+  - Off-by-one claims without verifying the actual allocation size and indexing convention (0-based vs 1-based, sentinel elements)
+  - Resource leaks (memory, file descriptors) without a demonstrable attacker-triggered exhaustion path
+  - Speculative claims using "might", "could", "potentially", "if the caller passes" without a demonstrated concrete path in the given code
+  - Race conditions in architecturally single-threaded code (event-loop, single-worker) or where lock scope matches access scope
+  - Path traversal claims where the code uses realpath/canonicalization AND verifies a directory-separator boundary after the prefix match
+  - Unsigned subtraction underflow where prior guards constrain operands to prevent the zero/negative case
+
+=== PHASE 5: FINAL VERDICT ===
+Based on surviving evidence from Phase 4:
+
+If one or more findings survived ALL verification steps:
+- vulnerable = true
+- Report CWE(s) only for verified finding(s), using the most specific CWE from Step D
+- Cite exact code location (line numbers and snippet) for each finding
+- Confidence: use 0.9+ only when you have a fully concrete trigger AND complete defense refutation; use 0.7-0.85 when the finding is solid but depends on assumptions about unseen code
+
+If NO findings survived verification:
+- vulnerable = false
+- Confidence reflects analysis thoroughness
+
+Rules:
+- Base analysis on the provided code. For called functions not shown, apply standard API contracts.
+- A vulnerability must be reachable through a concrete execution path with concrete trigger values.
+- Code that handles errors by checking return values AND stopping execution on the error path is NOT vulnerable for that error path.
+- Do NOT count the same root cause multiple times.
+- After your reasoning, you MUST output the JSON object below. Do not omit it.
+
+Output format:
+- First: write your SCoT reasoning following Phases 1-5 above.
+- Then: output ONLY one JSON object (no markdown fences, no extra text before or after the JSON).
+
+Required JSON schema:
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+Code:
+{{CODE}}

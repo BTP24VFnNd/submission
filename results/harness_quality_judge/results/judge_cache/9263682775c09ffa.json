@@ -1,0 +1,74 @@
+{
+  "judge_runs": [
+    {
+      "valid": false,
+      "ratings": {},
+      "weighted_score": null,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "4a6d61a1160223401e38f9ea58ff5fba8b8b998a4ac0ce878b98a799f1bd41df",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:38:16.354580+00:00"
+      },
+      "error": "global_ambiguities must be strings"
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The \"OUTPUT BUDGET\" clause says to keep the reasoning to at most 40 lines or half the code length, but it does not specify whether the line count includes the JSON object or only the plain\u2011text SCoT reasoning. This could lead to differing interpretations when the code is very short."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "4a6d61a1160223401e38f9ea58ff5fba8b8b998a4ac0ce878b98a799f1bd41df",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:39:42.586367+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 4.0
+  },
+  "semantic_quality_score": 100.0,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": null,
+  "per_dimension_rating_differences": {},
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The \"OUTPUT BUDGET\" clause says to keep the reasoning to at most 40 lines or half the code length, but it does not specify whether the line count includes the JSON object or only the plain\u2011text SCoT reasoning. This could lead to differing interpretations when the code is very short."
+  ],
+  "semantic_eligible": true
+}

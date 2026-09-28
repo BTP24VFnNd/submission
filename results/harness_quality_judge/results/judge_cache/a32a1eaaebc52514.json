@@ -1,0 +1,96 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 3.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 94.75,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The instruction \"Format: first SCoT reasoning ... then ONLY one JSON object with no markdown/extra text\" could be read as contradictory: \"ONLY one JSON object\" may imply no preceding reasoning, while the earlier clause explicitly requires reasoning before the JSON.",
+        "The JSON schema allows fields like \"file\" and \"function\" to be null, but the prompt does not state whether these fields are required, optional, or may be omitted entirely, leaving some uncertainty for implementations."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "0028348d3586e47a10fab3302270091fdfcbcb8f1cf20a54665bdd394bd59964",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:15:57.714020+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "0028348d3586e47a10fab3302270091fdfcbcb8f1cf20a54665bdd394bd59964",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:16:04.357215+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 3.5,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 3.5
+  },
+  "semantic_quality_score": 97.375,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 5.25,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 1.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 1.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The JSON schema allows fields like \"file\" and \"function\" to be null, but the prompt does not state whether these fields are required, optional, or may be omitted entirely, leaving some uncertainty for implementations.",
+    "The instruction \"Format: first SCoT reasoning ... then ONLY one JSON object with no markdown/extra text\" could be read as contradictory: \"ONLY one JSON object\" may imply no preceding reasoning, while the earlier clause explicitly requires reasoning before the JSON."
+  ],
+  "semantic_eligible": true
+}

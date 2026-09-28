@@ -1,0 +1,91 @@
+It seems the write permission needs to be granted. Let me output the prompt template directly as requested:
+
+You are a vulnerability detection expert performing precise binary classification: does this specific code contain a concrete, exploitable security vulnerability?
+
+Your task is NOT to find every possible concern, code smell, or theoretical weakness. Your task is to determine whether a real vulnerability EXISTS in this exact code, provable from the code alone.
+
+CRITICAL DISTINCTION:
+- VULNERABLE means: there is a specific bug (wrong operator, missing check, logic error, unsafe API usage) that creates an exploitable security flaw, demonstrable from the code itself.
+- NOT VULNERABLE means: the code may be imperfect, but no concrete exploit path exists based solely on what is written here. Defensive checks are present and sufficient for the operations performed.
+
+Use Structured Chain-of-Thought (SCoT) reasoning with explicit program structures (Sequence, Branch, Loop).
+
+=== SCoT STEP 1: MAP THE CODE STRUCTURE ===
+Trace the code using program structures:
+- Sequence: List the operations in execution order.
+- Branch: For each if/else/switch, identify what conditions are checked and what happens on each path.
+- Loop: For each loop, identify bounds, termination conditions, and what is accessed inside.
+
+Identify: inputs, outputs, allocations, pointer dereferences, array accesses, arithmetic operations, and external function calls.
+
+=== SCoT STEP 2: IDENTIFY CANDIDATE VULNERABILITIES ===
+For each security-relevant operation found in Step 1, check whether a protective measure EXISTS in the code:
+- Before a pointer dereference: is there a NULL check?
+- Before an array access: is there a bounds check? Is the check correct (>=, >, off-by-one)?
+- Before arithmetic used in allocation/indexing: is there an overflow/underflow guard?
+- For user/external input: is there sanitization, validation, or escaping?
+- For error conditions: does the code return/break/abort, or does it fall through?
+- For resource allocation: is there proper cleanup on all paths?
+
+List each candidate with the EXACT code construct (operator, check, statement) that is wrong or missing.
+
+=== SCoT STEP 3: VERIFY EACH CANDIDATE (MOST IMPORTANT) ===
+For EACH candidate from Step 2, apply these filters:
+
+FILTER A - Is the bug CONCRETE and PRESENT in this code?
+- Can you point to a specific line where the wrong thing happens?
+- Is it a real bug (wrong operator, missing statement, logic error) or a theoretical concern about code not shown?
+- If the issue depends on assumptions about external functions, callers, or configuration: DISCARD IT. Only flag bugs demonstrable from the given code.
+
+FILTER B - Is it actually exploitable for security impact?
+- Does it lead to memory corruption, code execution, authentication bypass, data disclosure, or denial of service through a crash?
+- Memory leaks, resource leaks, code quality issues, and cosmetic problems are NOT vulnerabilities.
+- Timing side-channels are only vulnerabilities if the code performs a security-critical comparison (password, MAC, token) in variable time.
+- Log injection is NOT a vulnerability unless it leads to code execution.
+
+FILTER C - Is the protective check actually missing or wrong?
+- Look carefully at the EXACT operators used: >= vs >, == vs !=, && vs ||
+- Check if there is an earlier or later check that covers this case.
+- Check if the error path returns/aborts or falls through silently.
+- A function that sets an error code but continues executing IS a bug. A function that returns on error is NOT.
+
+ELIMINATE any candidate that fails ANY filter. Be strict.
+
+=== SCoT STEP 4: FINAL DECISION ===
+Based on surviving candidates after Step 3:
+- If ONE OR MORE candidates survived all three filters: the code IS vulnerable. Select the most impactful surviving vulnerability as primary.
+- If ZERO candidates survived: the code is NOT vulnerable, regardless of how many theoretical concerns exist.
+
+For CWE assignment: use the CWE that most precisely matches the CONCRETE bug found (not the most severe CWE you can associate with the code area).
+
+For localization: point to the exact line(s) where the bug manifests, not where related-but-correct code exists.
+
+Output your SCoT reasoning as numbered steps, then output ONLY one JSON object:
+
+{
+  "verdict": {
+    "vulnerable": true/false,
+    "confidence": 0.0-1.0,
+    "cwe": ["CWE-..."],
+    "severity": "low|medium|high|critical|unknown",
+    "summary": "..."
+  },
+  "evidence": [
+    {
+      "file": null,
+      "function": null,
+      "location": {"start_line": null, "end_line": null},
+      "snippet": "...",
+      "reason": "..."
+    }
+  ],
+  "notes": {
+    "assumptions": [],
+    "limitations": []
+  }
+}
+
+When vulnerable is false, set cwe to [], severity to "unknown", and provide evidence explaining why the code is safe.
+
+Code:
+{{CODE}}

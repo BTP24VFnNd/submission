@@ -1,0 +1,94 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "987f326aaf940ced2689c7c27896da083c0354fee98010d99bcf1ef5a2853399",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:26:44.492303+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The instruction \u201coutput ONLY the required JSON object\u201d appears both before and after the clarification that SCoT reasoning should precede the JSON; while the later clarification resolves the ambiguity, the phrasing could be misread as prohibiting any pre\u2011JSON text."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "987f326aaf940ced2689c7c27896da083c0354fee98010d99bcf1ef5a2853399",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:27:00.545865+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 4.0
+  },
+  "semantic_quality_score": 100.0,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 0.0,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 0.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The instruction \u201coutput ONLY the required JSON object\u201d appears both before and after the clarification that SCoT reasoning should precede the JSON; while the later clarification resolves the ambiguity, the phrasing could be misread as prohibiting any pre\u2011JSON text."
+  ],
+  "semantic_eligible": true
+}

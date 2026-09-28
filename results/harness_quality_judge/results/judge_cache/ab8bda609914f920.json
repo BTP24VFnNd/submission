@@ -1,0 +1,98 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 2.0,
+        "internal_consistency_precedence": 0.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 80.75,
+      "critical_failures": [
+        "The prompt simultaneously requires (a) that the model first write SCoT reasoning in plain text and then output a JSON object, and (b) that the model output ONLY the JSON object with no extra text. These two directives are mutually exclusive, making it impossible to produce a compliant response."
+      ],
+      "global_ambiguities": [
+        "The contradictory output instructions create ambiguity about whether any pre\u2011JSON reasoning text is allowed."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "d8dc46207923f5b6997d528e857dce44708cc05498c369e21824c87b62901c35",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:19:24.861698+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "d8dc46207923f5b6997d528e857dce44708cc05498c369e21824c87b62901c35",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:20:08.488250+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 3.0,
+    "internal_consistency_precedence": 2.0,
+    "organization_maintainability": 3.5
+  },
+  "semantic_quality_score": 90.375,
+  "semantic_stability": "unstable",
+  "absolute_total_score_difference": 19.25,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 2.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 1.0
+  },
+  "critical_failures": [
+    "The prompt simultaneously requires (a) that the model first write SCoT reasoning in plain text and then output a JSON object, and (b) that the model output ONLY the JSON object with no extra text. These two directives are mutually exclusive, making it impossible to produce a compliant response."
+  ],
+  "global_ambiguities": [
+    "The contradictory output instructions create ambiguity about whether any pre\u2011JSON reasoning text is allowed."
+  ],
+  "semantic_eligible": false
+}

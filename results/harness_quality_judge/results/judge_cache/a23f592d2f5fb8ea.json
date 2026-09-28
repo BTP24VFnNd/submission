@@ -1,0 +1,80 @@
+{
+  "judge_runs": [
+    {
+      "valid": false,
+      "ratings": {},
+      "weighted_score": null,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "2aa7d0d37110bdabc0a86950d7040b99b7d0affd89bc8c28153fa9cbc468f0ae",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:24:55.343912+00:00"
+      },
+      "error": "evidence must be an array"
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 1.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 91.25,
+      "critical_failures": [
+        "The prompt contains contradictory output instructions: it first requires a full SCoT reasoning text followed by a JSON object, but later states that after reasoning the model must output ONLY the JSON object with no extra text. These mutually exclusive requirements make it impossible to satisfy both simultaneously."
+      ],
+      "global_ambiguities": [
+        "Unclear whether the reasoning text is allowed before the JSON, given the later clause \"output ONLY one JSON object (no markdown, no extra text)\".",
+        "The phrase \"nothing after the closing brace\" conflicts with the earlier instruction to include reasoning before the JSON."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "2aa7d0d37110bdabc0a86950d7040b99b7d0affd89bc8c28153fa9cbc468f0ae",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:25:27.305019+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 1.0,
+    "organization_maintainability": 3.0
+  },
+  "semantic_quality_score": 91.25,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": null,
+  "per_dimension_rating_differences": {},
+  "critical_failures": [
+    "The prompt contains contradictory output instructions: it first requires a full SCoT reasoning text followed by a JSON object, but later states that after reasoning the model must output ONLY the JSON object with no extra text. These mutually exclusive requirements make it impossible to satisfy both simultaneously."
+  ],
+  "global_ambiguities": [
+    "The phrase \"nothing after the closing brace\" conflicts with the earlier instruction to include reasoning before the JSON.",
+    "Unclear whether the reasoning text is allowed before the JSON, given the later clause \"output ONLY one JSON object (no markdown, no extra text)\"."
+  ],
+  "semantic_eligible": false
+}

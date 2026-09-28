@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""
+Standalone vulnerability-detection harness.
+
+Plug this into any agent or model backend:
+    from harness import build_prompt, parse_verdict
+    prompt = build_prompt(code)          # send this to your model
+    verdict = parse_verdict(raw_output)  # feed the model's raw text back in
+"""
+import json
+import re
+import sys
+from typing import Any, Dict, Optional
+
+PROMPT_TEMPLATE = 'You are an expert software engineer and security analyst specializing in vulnerability detection.\n\nAnalyze the provided code for security vulnerabilities using Structured Chain-of-Thought (SCoT). Reason explicitly through the program\'s concrete structures — Sequence, Branch, Loop — and anchor every claim to the exact code (verbatim snippet + line numbers). Work through the following phases in order.\n\n### Phase 1 — Inputs, provenance classification, return-status tracking, and security-relevant sinks (Sequence)\nList every input to the analyzed code (parameters, globals, return values of called functions, library/OS data). For each input state:\n- its data type and value range, and the RESIDUAL RANGE after every constraint the shown code imposes (checks, casts, whitelists, length caps — name the constraint and the line),\n- its provenance classified by ROLE IN THE SHOWN CODE, not by speculation about callers: (a) entry-point input — the function parses or otherwise consumes externally supplied data (argv/environment, socket/network packet, file contents, MMIO/register reads, protocol messages, untrusted callbacks): the origin is attacker-controlled unless the shown code itself imposes a constraint; (b) internal-helper parameter — provenance is unknown from the shown code alone: determine the residual range that the shown code\'s own guards leave unconstrained and analyze that exact range; (c) framework/library/OS-provided data — name the invariant visible in the shown code that guarantees trust. An invariant stated only outside the shown code cannot be used.\n\nThen, for every call in the shown code, record its return value and every subsequent use or non-use. A return status that is discarded, compared for only part of its outcomes, or treated as success while a prior step failed is itself a candidate (error/status-handling flaw) — track it through Phase 3 like any other candidate.\n\nThen inventory every security-relevant operation and security-relevant call in the shown code with its exact line — including operations hidden inside called functions whose ARGUMENTS (indices, sizes, lengths, pointers, format strings, paths) are supplied by the shown code:\n- memory operations: reads/writes, copies, memmove/strcpy/sprintf, pointer arithmetic, allocations whose sizes derive from input, calls whose index/size/length arguments are derived from input,\n- injection sinks: printf-family format strings, system/exec/spawn, shell command construction, SQL/XPath/query construction, log writes, HTTP header/URL construction, HTML output,\n- crypto/entropy: PRNG seeding, key generation, KDF usage, certificate/signature validation, weak-algorithm choices,\n- file and access control: path construction, symlink/hardlink handling, authn/authz checks, permission/file-creation logic,\n- logic flaws, error/status handling, and return-value mishandling.\nThis inventory forces coverage of every vulnerability class present in the code, not only memory safety.\n\n### Phase 2 — Structure walk\nTrack exact sizes, lengths, indices, pointer values, and string/data values as they flow; name precise line numbers. Cover every structure:\n\n**Sequence (ordered steps):** State each operation in order. For every buffer or allocation, record its exact size and how that size changes as values flow. Identify every representation change (int to size_t, 32-bit to 64-bit, narrowing cast, signedness flip) and whether it can change a value. For every data transformation aimed at a sink (concatenation into a query/log/command/path, truncation, escaping, format-string use), state what the transformation preserves and what it removes, and whether dangerous content survives. For every value that reaches a sink, state its derivation path ENTIRELY inside the shown code (each step with its operator, its types, and its line); a dangerous property whose derivation cannot be traced through the shown code is unconfirmed.\n\n**Branch (if/else):** For each conditional, state precisely what it guards, then compute the guard\'s ADMITTED VALUE SET using the actual declared types and signedness, and the EXCLUDED set. For every guard protecting a dangerous operation, check whether the failure set and the admitted set intersect:\n- If the intersection is empty, the guard fully protects — name the boundary value or range that proves it and move on.\n- If non-empty, report a witness that is A MEMBER OF THE ADMITTED SET: a concrete value passing the guard, respecting every other constraint on the path (types, casts, signedness, earlier guards), that still triggers the failure; name the sink line. A witness a guard demonstrably excludes, or one whose path contradicts an earlier check, is invalid and must not be reported.\n- If a guard is absent, do not assume one exists; name the missing check and the input that exploits the absence.\nOff-by-one and exact-boundary claims (`>` vs `>=`, `<=` vs `<`, equality against a boundary) REQUIRE the capacity of the accessed object to be identifiable from the shown code (a declaration, an allocation, a named constant, or the standard semantics of the accessed API); if the size is not identifiable from the shown code, the boundary claim is unconfirmable and belongs in limitations. Check off-by-one conventions explicitly: `i < N` admits 0..N-1; `i <= N` admits N and is unsafe for any sink indexing an N-element array with i; a guard tested from attacker data must protect the exact later use, including the use one step after the check.\n\n**Loop (for/while):** Derive the iteration bound from the loop\'s own condition, not intuition. Compare the maximum reachable index against the capacity of the object accessed inside the body (capacity rule as in Branch) and check the strict-inequality relationship explicitly. State whether the loop terminates and whether the largest reachable index can exceed the bound. For loops over input (parsers, decoders, tokenizers, list walks), track the read position vs. remaining size invariant and identify any point where it can underflow or advance past the end across iterations; derive what bounds the input length and whether that bound is respected in the shown code. For sentinel-based loops (`while (s[i])`, `while (*p)`, `while ((c = getc()))`), state which element terminates the loop, whether an unterminated or adversarial input can overrun, and whether termination is guaranteed for every attacker-chosen input.\n\n### Phase 3 — Candidate findings and three-part confirmation\nFor every suspected vulnerability formed during the walk — including non-memory classes (log injection, header injection, ReDoS/algorithmic complexity, weak crypto, command/argument injection, authz bypass) and logic classes (error/status-handling flaws, TOCTOU, dead/incorrect return paths, uninitialized use, bad casts) — subject it to three-part confirmation anchored to lines of the shown code:\n1. **Taint:** Which input (with its residual range from Phase 1) flows to the sink? Name the sink line.\n2. **Reachability within the shown code:** Show the exact path and a concrete value, derived ENTIRELY from values visible in the shown code, that triggers the failure; the value must be a member of every guard\'s admitted set along the path. **Call-site confirmation:** the sink may be a call whose callee body is not shown — a standard operation (memcpy/strcpy/sscanf-family, malloc/calloc/realloc, read/write, array subscript, strlen-based truncation, printf-family) or a helper whose parameter is, by its name and its use in the shown code, an index/size/length consumed as such. The finding anchors at the CALL SITE in the shown code when the shown code derives an argument that is out of the domain that operation requires (e.g., an index of -1 derived from a zero count, a length that underflows, a size exceeding a named limit, a decoded length used as an array index). The callee body need not be shown: do not demote such a derivation to "code not shown", and do not manufacture a finding whose failure depends on callee behavior beyond that standard or name-implied semantics.\n3. **Impact:** State the precise security mechanism and the primary CWE (with a secondary CWE only if independently confirmed and only when it is an independent root cause, e.g., an integer wrap corrupting an allocation size reported as CWE-190 secondary to a CWE-787 primary).\n\nClass-specific confirmation standards:\n- OOB read/write: name the object, its capacity as identifiable per Phase 2, the derived index/size with line numbers, and the exact excess (e.g., index == capacity, or size beyond capacity by N). Without an identifiable capacity AND a derivation that is out of domain by the shown code\'s own arithmetic, the claim is a limitation, not a finding.\n- Integer overflow / bad cast (CWE-190/CWE-195/CWE-681): show (a) operand provenance and possible magnitudes within the shown code, (b) that the wrap/truncation actually occurs in the shown types, and (c) that the corrupted value is then consumed by an allocation-size, index, length, or pointer-arithmetic sink in the shown code. An unsigned underflow or signed/unsigned reinterpretation is a candidate only when the resulting value reaches such a sink.\n- NULL dereference: the NULL must be producible on a path inside the shown code (an allocation whose result is dereferenced after failure, a lookup/parse call in the shown chain that returns NULL for attacker-reachable input, a derivation that yields NULL, a search that fails and is dereferenced). NULL that only an out-of-scope caller could supply is a limitation.\n- Injection (command, SQL, log, header, format-string, XSS, open redirect): dangerous content must survive to the sink. For each transformation between input and sink, state what is removed (escaping, quoting, filtering, truncation) and whether the dangerous characters still reach the sink; if they are fully neutralized, it is not a finding; if only partly neutralized, name the surviving payload.\n- Error/status-handling flaw: identify the step that failed, the discarded or misused return status, and the subsequent operation that runs on the failure state (returning success after a failed step, dereferencing after failure, proceeding with partial data) — name both lines.\n- Weak crypto/entropy: the shown code must CHOOSE the weak algorithm, seed, key size, or PRNG; internals elsewhere do not matter.\n\nMatters that are NOT findings — record these in `notes.limitations` instead:\n- a claim whose witness value cannot be expressed as a member of the admitted sets of every guard on the path, using the shown code\'s own types;\n- an off-by-one or boundary claim for an object whose capacity is not identifiable from the shown code;\n- failure requiring an unchecked allocation to fail, absent attacker control of the allocation size victims, with DoS impact only if volume scales with attacker input in a reachable loop;\n- silent truncation with no security impact;\n- a dereference of NULL unless the shown path produces NULL;\n- a hang/non-termination claim unless execution is actually unbounded on attacker-chosen input (a finite-state loop guaranteed to terminate is not a hang finding, though pathological runtime still matters for ReDoS);\n- single-shot leaks that do not compound with attacker-controlled volume;\n- a "thin wrapper" or "pass-through" that forwards an index/argument unchanged when the shown code does derive or forward an out-of-domain value to a consuming call.\n\nA positive ("vulnerable") verdict is justified ONLY when all three parts are substantiated with concrete code anchors in the shown code; anything failing part 2 or 3 belongs in limitations with no CWE attached.\n\n### Phase 4 — Differential verification and verdict assembly\nBefore finalizing, re-check every candidate:\n1. Re-verify all three parts per confirmed candidate; for each, re-derive the witness as a member of each guard\'s admitted set along the path with the actual types and signedness. If any part lacks a concrete line and a value traceable entirely through the shown code, demote it with no CWE.\n2. For a "not vulnerable" conclusion on code that LOOKS dangerous, you MUST locate the actual protective check in the shown code and state the exact bound it enforces (which values it admits, which it excludes). If you cannot name the protecting check and its bound, you likely missed the intended fix — re-examine each sink from the Phase 1 inventory. A safe verdict supported by identified guards and actual sizes, not by absence of analysis, is final. Symmetrically, do not conclude safety from a capacity or invariant that is not present in the shown code.\n3. CWE discipline: choose the PRIMARY CWE from the confirmed mechanism at the confirmed sink — e.g., OOB write via index/size → CWE-787; OOB read → CWE-125; NULL deref → CWE-476; use-after-free/double-free → CWE-416/CWE-415; fixed stack/heap buffer overflow by unbounded copy over a visible size → CWE-121/CWE-122; integer overflow only as primary when the wrap is itself the root cause at the sink (if the wrap corrupts an allocation size and the failure is the resulting OOB, CWE-190 is secondary to CWE-787/122); signed-to-unsigned conversion of a negative value into a huge size → CWE-195; format string → CWE-134; command injection → CWE-78; path traversal → CWE-22; log injection → CWE-117; open redirect → CWE-601; resource exhaustion → CWE-400/CWE-770; ReDoS → CWE-1333; weak crypto → CWE-326/CWE-338; missing authorization → CWE-862/CWE-863; TOCTOU → CWE-367; error-handling flaw (success after failure, unchecked return) → CWE-390/703/754; generic CWE-20 only when no confirmed mechanism is more specific. The verdict\'s `cwe` array must contain only confirmed findings — normally a single primary CWE plus at most one independently confirmed secondary. When not vulnerable, `cwe` is `[]` and severity is `"unknown"` regardless of how concerning the code looked. Keep the summary focused on the single most severe confirmed finding; mention other confirmed findings only in `notes.limitations` or briefly in the summary, not as extra CWEs.\n4. Calibrate confidence to demonstratedness: a confirmed witness that is a member of every guard\'s admitted set (exact value + sink line) supports confidence >= 0.7; a confirmed finding with a sound residual-range analysis but only a range, not a single demonstrated value, 0.5-0.7; any candidate whose confidence would fall below 0.5 belongs in limitations with no CWE.\n5. Keep verdict and evidence consistent: evidence items exist only for confirmed findings. Do not add evidence items for guard lines, unrelated allocations, or demoted concerns. Report each distinct sink statement as its own minimal evidence item.\n\n## Rules\n- Base all reasoning only on the given code; do not rewrite or modify it.\n- Follow actual control flow (paths, checks, state changes); track real values and exact bounds, not hypothetical behavior or assumed callers.\n- Classify each input by its role in the shown code (entry-point vs internal-helper vs framework-provided), then analyze the residual range for the role, never the invented pre-check range, and never a range established only outside the shown code.\n- Focus on security-relevant behavior across memory safety, injection sinks, crypto/entropy, input validation, file handling, authz/authn, and error/status handling, as inventoried in Phase 1.\n- Distinguish a confirmed, reachable, attacker-triggerable vulnerability from a defensive-hardening or robustness concern.\n- Do NOT add few-shot examples.\n- After reasoning, output ONLY the JSON object described below.\n\n## Output format\n- First: write your SCoT reasoning in plain text with numbered steps (Phases 1–4), explicitly working through Sequence, Branch, and Loop structures.\n- Then: output ONLY one JSON object (no markdown, no extra text, nothing after the closing brace).\n\nRequired JSON schema (fields and types must match exactly — do not change):\n{\n  "verdict": {\n    "vulnerable": true/false,\n    "confidence": 0.0-1.0,\n    "cwe": ["CWE-..."],\n    "severity": "low|medium|high|critical|unknown",\n    "summary": "..."\n  },\n  "evidence": [\n    {\n      "file": null,\n      "function": null,\n      "location": {"start_line": null, "end_line": null},\n      "snippet": "...",\n      "reason": "..."\n    }\n  ],\n  "notes": {\n    "assumptions": [],\n    "limitations": []\n  }\n}\n\n## Evidence precision requirements\n- For each evidence item, set `location.start_line` and `location.end_line` to the real, minimal line span of the sink statement in the shown code (a single line when the sink is a single operation). When one finding has several distinct sink statements, give each its own evidence item with its own minimal span rather than one multi-statement range.\n- Set `snippet` to the exact code at those lines, quoted verbatim — no paraphrasing, ellipses, substitutions, multi-statement ranges, or comment text.\n- Set `reason` to tie the specific index/pointer/size/value to its residual-range source (Phase 1) and to the concrete confirmed failure (Phase 3), naming the guard\'s admitted set and its insufficiency inside the reason rather than listing the check code as a separate evidence item. Also name the primary CWE\'s mechanism.\n- Keep `notes.assumptions` for invariants relied on and `notes.limitations` for unconfirmed hypotheses and out-of-scope concerns.\n\nCode:\n{{CODE}}'
+
+REQUIRED_VERDICT_KEYS = {"vulnerable", "confidence", "cwe", "severity", "summary"}
+REQUIRED_TOP_KEYS = {"verdict", "evidence", "notes"}
+
+
+def build_prompt(code: str) -> str:
+    """Render the harness prompt for a single code sample."""
+    return PROMPT_TEMPLATE.replace("{{CODE}}", code)
+
+
+def _strip_eos_tokens(raw: str) -> str:
+    for tok in ("<|endoftext|>", "<|end|>", "<|im_end|>", "<|im_start|>"):
+        raw = raw.replace(tok, "")
+    return raw
+
+
+def _sanitize_control_chars(raw: str) -> str:
+    def _replace(m):
+        c = m.group(0)
+        return {'\t': '\\t', '\b': '\\b', '\f': '\\f'}.get(c, f'\\u{ord(c):04x}')
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', _replace, raw)
+
+
+def _find_verdict_object(text: str, strict: bool = True) -> Optional[Dict[str, Any]]:
+    decoder = json.JSONDecoder(strict=strict)
+    for m in re.finditer(r'\{', text):
+        start = m.start()
+        try:
+            obj, _ = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(obj, dict) or "verdict" not in obj:
+            continue
+        v = obj["verdict"]
+        if isinstance(v, str) and "|" in v:
+            continue
+        if isinstance(v, dict) and isinstance(v.get("vulnerable"), bool):
+            return obj
+    return None
+
+
+def _extract_verdict_direct(text: str) -> Optional[Dict[str, Any]]:
+    for m in re.finditer(r'"verdict"\s*:\s*\{', text):
+        vstart = m.end() - 1
+        depth = 0
+        for i in range(vstart, min(vstart + 5000, len(text))):
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+            if depth == 0:
+                verdict_str = text[vstart:i + 1]
+                for strict in (True, False):
+                    try:
+                        obj = json.loads(verdict_str, strict=strict)
+                        if isinstance(obj, dict) and isinstance(obj.get("vulnerable"), bool):
+                            return {"verdict": obj}
+                    except json.JSONDecodeError:
+                        continue
+                break
+    return None
+
+
+def extract_json(raw: str) -> Optional[Dict[str, Any]]:
+    """Find the first valid JSON verdict object in raw model output."""
+    cleaned = _strip_eos_tokens(raw)
+
+    result = _find_verdict_object(cleaned, strict=True)
+    if result:
+        return result
+
+    result = _find_verdict_object(cleaned, strict=False)
+    if result:
+        return result
+
+    sanitized = _sanitize_control_chars(cleaned)
+    result = _find_verdict_object(sanitized, strict=True)
+    if result:
+        return result
+
+    stripped = re.sub(r'```(?:json)?\s*', '', cleaned)
+    result = _find_verdict_object(stripped, strict=False)
+    if result:
+        return result
+
+    return _extract_verdict_direct(cleaned)
+
+
+def validate_schema(obj: Dict[str, Any]) -> list:
+    errors = []
+    for k in REQUIRED_TOP_KEYS:
+        if k not in obj:
+            errors.append(f"missing top-level key: {k}")
+    verdict = obj.get("verdict", {})
+    if isinstance(verdict, dict):
+        for k in REQUIRED_VERDICT_KEYS:
+            if k not in verdict:
+                errors.append(f"missing verdict key: {k}")
+        if "vulnerable" in verdict and not isinstance(verdict["vulnerable"], bool):
+            errors.append(f"verdict.vulnerable should be bool, got {type(verdict['vulnerable']).__name__}")
+    else:
+        errors.append(f"verdict should be dict, got {type(verdict).__name__}")
+    return errors
+
+
+def parse_verdict(raw_output: str) -> Dict[str, Any]:
+    """Parse a model's raw text response into a structured verdict.
+
+    Returns dict with: parsed, errors, vulnerable, confidence.
+    """
+    obj = extract_json(raw_output)
+    if obj is None:
+        return {
+            "parsed": None,
+            "errors": ["no valid JSON verdict found in output"],
+            "vulnerable": None,
+            "confidence": None,
+        }
+    schema_errors = validate_schema(obj)
+    verdict = obj.get("verdict", {})
+    return {
+        "parsed": obj,
+        "errors": schema_errors,
+        "vulnerable": verdict.get("vulnerable") if isinstance(verdict, dict) else None,
+        "confidence": verdict.get("confidence") if isinstance(verdict, dict) else None,
+    }
+
+
+def main() -> None:
+    """CLI: render the prompt for a code file (or stdin) and print it."""
+    code = open(sys.argv[1]).read() if len(sys.argv) > 1 else sys.stdin.read()
+    print(build_prompt(code))
+
+
+if __name__ == "__main__":
+    main()

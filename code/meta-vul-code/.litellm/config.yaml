@@ -1,0 +1,110 @@
+model_list:
+  - model_name: "zai-org/GLM-5.3:peft:262144"
+    litellm_params:
+      model: openai/zai-org/GLM-5.3:peft:262144
+      api_base: https://tinker.thinkingmachines.dev/services/tinker-prod/oai/api/v1
+      api_key: os.environ/TINKER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "thinkingmachines/Inkling"
+    litellm_params:
+      model: openai/thinkingmachines/Inkling
+      api_base: https://tinker.thinkingmachines.dev/services/tinker-prod/oai/api/v1
+      api_key: os.environ/TINKER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "thinkingmachines/Inkling-Small"
+    litellm_params:
+      model: openai/thinkingmachines/Inkling-Small
+      api_base: https://tinker.thinkingmachines.dev/services/tinker-prod/oai/api/v1
+      api_key: os.environ/TINKER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "moonshotai/Kimi-K2.6:peft:131072"
+    litellm_params:
+      model: openai/moonshotai/Kimi-K2.6:peft:131072
+      api_base: https://tinker.thinkingmachines.dev/services/tinker-prod/oai/api/v1
+      api_key: os.environ/TINKER_API_KEY
+      use_chat_completions_api: true
+  # OpenRouter models: launch with --model "openrouter/<model_name>".
+  # Needs OPENROUTER_API_KEY. Slugs: https://openrouter.ai/models
+  - model_name: "z-ai/glm-5.3"
+    litellm_params:
+      model: openrouter/z-ai/glm-5.3
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "moonshotai/kimi-k2.6"
+    litellm_params:
+      model: openrouter/moonshotai/kimi-k2.6
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "z-ai/glm-5.3-flash"
+    litellm_params:
+      model: openrouter/z-ai/glm-5.3-flash
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "deepseek/deepseek-v4-flash-0731:free"
+    litellm_params:
+      model: openrouter/deepseek/deepseek-v4-flash-0731:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  # Paid. OpenRouter already routes tool calls only to tool-capable providers;
+  # require_parameters would reject every Codex request (no provider supports
+  # all of Codex's parameters).
+  - model_name: "openai/gpt-oss-120b"
+    litellm_params:
+      model: openrouter/openai/gpt-oss-120b
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  - model_name: "openai/gpt-oss-20b"
+    litellm_params:
+      model: openrouter/openai/gpt-oss-20b
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  # Paid. Pinned to fp8 providers so precision is fixed across the whole run.
+  - model_name: "deepseek/deepseek-v4-flash-0731"
+    litellm_params:
+      model: openrouter/deepseek/deepseek-v4-flash-0731
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+      extra_body:
+        provider:
+          quantizations: ["fp8"]
+  # Was pinned to fp8 (Venice only) until 2026-09-24. Venice alone rate-limited the
+  # run and rejected ~25% of calls (400 "Text content cannot be empty"), so the pin
+  # was dropped: Cloudflare is tried first, Venice as fallback. Iterations 0, 15 and
+  # the start of 4 of the 20260919_204729 GLM transfer ran on Venice fp8; later
+  # samples are mixed-provider. The proxy log records provider_name per response.
+  - model_name: "z-ai/glm-4.7-flash"
+    litellm_params:
+      model: openrouter/z-ai/glm-4.7-flash
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+      extra_body:
+        provider:
+          order: ["Cloudflare", "Venice"]
+          allow_fallbacks: true
+  # NVIDIA Nemotron 3.5 Lightning (30B-A3B). No fp8 endpoint on OpenRouter; bf16 providers only.
+  - model_name: "nvidia/nemotron-3.5-lightning"
+    litellm_params:
+      model: openrouter/nvidia/nemotron-3.5-lightning
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+      extra_body:
+        provider:
+          quantizations: ["bf16"]
+  # Qwen3.8 Flash: single provider (Alibaba) with unlisted quantization, so no precision pin.
+  - model_name: "qwen/qwen3.8-flash"
+    litellm_params:
+      model: openrouter/qwen/qwen3.8-flash
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  # Qwen3.7 Flash: single provider (Alibaba) with unlisted quantization, so no precision pin.
+  - model_name: "qwen/qwen3.7-flash"
+    litellm_params:
+      model: openrouter/qwen/qwen3.7-flash
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true
+  # OpenAI GPT-4o via OpenRouter. Served only by OpenAI itself, so no quantization pin.
+  - model_name: "openai/gpt-4o"
+    litellm_params:
+      model: openrouter/openai/gpt-4o
+      api_key: os.environ/OPENROUTER_API_KEY
+      use_chat_completions_api: true

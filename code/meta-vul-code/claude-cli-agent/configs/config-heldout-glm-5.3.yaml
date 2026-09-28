@@ -1,0 +1,40 @@
+# Held-out on PrimeVul with GLM-5.3 (OpenRouter) through the Claude CLI: the same model that optimized session 20260922_170038.
+# Used by run/held-out-claude.sh, e.g. for the GLM-5.3 session 20260922_170038.
+# The Claude CLI talks to the local LiteLLM proxy (see runner/model_client.py, model_env);
+# the proxy routes "z-ai/glm-5.3" to OpenRouter (.litellm/config.yaml).
+# Runner settings match the GLM-5.3 discovery run's config.
+model:
+  name: "z-ai/glm-5.3"
+  backend: "claude-cli"
+  provider: "openrouter"
+  # The Claude CLI does not know this model name and intermittently refuses it under load;
+  # a modelPicker row mapping it to a known Claude model stops that (runner/model_client.py).
+  behaves_as: "claude-sonnet-4-5"
+
+decoding:
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 4096
+
+dataset:
+  name: "primevul_paired_test"
+  path: "../../data/primevul/test_with_vul_lines_uuid.jsonl"
+  code_field: "func"
+  label_field: "target"
+  id_field: "cve"
+
+policies:
+  - scot
+
+prompts_dir: "prompts/"
+outputs_dir: "outputs/"
+
+agentic:
+  enabled: true
+
+runner:
+  timeout_s: 1800  # 30 min per call (was 900; long GLM-5.3 / DeepSeek calls hit the limit)
+  retries: 3
+  retry_delay_s: 1.0
+  concurrency: 60
+  skip_existing: true

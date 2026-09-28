@@ -1,0 +1,76 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 3.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 96.25,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The prompt requires confidence to be \"proportional to evidence specificity\" but does not provide a precise mapping, leaving some freedom for interpretation.",
+        "The format for quoting line ranges is described (e.g., \"start_line/end_line\"), yet the exact JSON field names for those ranges are not reiterated in the output contract, which could cause minor mismatches."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "3df037b21c7be25b727a91ae259aca878f745492c966f478fefe5b43d81b5ee5",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:16:12.489003+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": false,
+      "ratings": {},
+      "weighted_score": null,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "3df037b21c7be25b727a91ae259aca878f745492c966f478fefe5b43d81b5ee5",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:16:17.852093+00:00"
+      },
+      "error": "global_ambiguities must be strings"
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 3.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 3.0
+  },
+  "semantic_quality_score": 96.25,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": null,
+  "per_dimension_rating_differences": {},
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The format for quoting line ranges is described (e.g., \"start_line/end_line\"), yet the exact JSON field names for those ranges are not reiterated in the output contract, which could cause minor mismatches.",
+    "The prompt requires confidence to be \"proportional to evidence specificity\" but does not provide a precise mapping, leaving some freedom for interpretation."
+  ],
+  "semantic_eligible": true
+}

@@ -1,0 +1,96 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The prompt assumes the code fragment is either vulnerable or its fixed counterpart with exactly one statement difference, which may not hold for arbitrary inputs.",
+        "Quoting line numbers presumes the code block is presented with stable 1\u2011based line numbers, which is not guaranteed by the template system."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "94718fe24b82a585a9ebd976c15097ce2f543eab9deda852a1a12db11fd09fe6",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:26:26.988667+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 98.75,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "94718fe24b82a585a9ebd976c15097ce2f543eab9deda852a1a12db11fd09fe6",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:26:33.224488+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 3.0
+  },
+  "semantic_quality_score": 98.75,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 0.0,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 0.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 0.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [
+    "Quoting line numbers presumes the code block is presented with stable 1\u2011based line numbers, which is not guaranteed by the template system.",
+    "The prompt assumes the code fragment is either vulnerable or its fixed counterpart with exactly one statement difference, which may not hold for arbitrary inputs."
+  ],
+  "semantic_eligible": true
+}

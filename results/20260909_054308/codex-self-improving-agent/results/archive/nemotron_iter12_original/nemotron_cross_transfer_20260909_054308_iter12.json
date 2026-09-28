@@ -1,0 +1,39 @@
+{
+  "experiment": "held-out cross-transfer",
+  "optimization_session": "20260909_054308",
+  "selected_iteration": 12,
+  "selection_model": "thinkingmachines/Inkling-Small",
+  "target_model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+  "reasoning_effort": "high",
+  "dataset": {
+    "name": "primevul_paired_test",
+    "samples": 870,
+    "pairs": 435,
+    "sha256": "9ed6fc03ac52b0afc1151a52c4811b223d4cb1277a5c1c39219222537c0f6801"
+  },
+  "prompt": {
+    "sha256": "29992048e7bc4894a63ef9d5df503c173f57cf648224d77d41258078948699a0",
+    "validation_pairwise_accuracy": 27.72
+  },
+  "runner": {
+    "concurrency": 8,
+    "timeout_seconds": 900,
+    "retries": 3,
+    "temperature": 0,
+    "isolation_profile": "benchmark_readonly"
+  },
+  "metrics": {
+    "tp": 222,
+    "fp": 206,
+    "fn": 213,
+    "tn": 229,
+    "precision": 0.5187,
+    "recall": 0.5103,
+    "f1": 0.5145,
+    "accuracy": 0.5184,
+    "pairwise_accuracy": 18.62,
+    "correct_pairs": 81,
+    "total_pairs": 435,
+    "parse_failures": 0
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "judge_runs": [
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "13d1d763a1c2526f7f7414358b33cdaf37d2c2f051f76e6dbfca08432993ad33",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T10:57:17.953695+00:00"
+      },
+      "error": null
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 3.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 97.0,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The prompt does not explicitly state what the model should do when the supplied code lacks sufficient context to reach a conclusion; it is implied that notes.assumptions/limitations can be used, but this is not spelled out."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "13d1d763a1c2526f7f7414358b33cdaf37d2c2f051f76e6dbfca08432993ad33",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T10:58:16.435070+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 3.5,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 4.0
+  },
+  "semantic_quality_score": 98.5,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": 3.0,
+  "per_dimension_rating_differences": {
+    "role_alignment": 0.0,
+    "task_identity_primary_task": 0.0,
+    "input_object_boundary": 0.0,
+    "required_analysis_mode_scot": 0.0,
+    "scope_grounding": 1.0,
+    "prohibited_behavior": 0.0,
+    "output_contract_semantics": 0.0,
+    "internal_consistency_precedence": 0.0,
+    "organization_maintainability": 0.0
+  },
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The prompt does not explicitly state what the model should do when the supplied code lacks sufficient context to reach a conclusion; it is implied that notes.assumptions/limitations can be used, but this is not spelled out."
+  ],
+  "semantic_eligible": true
+}

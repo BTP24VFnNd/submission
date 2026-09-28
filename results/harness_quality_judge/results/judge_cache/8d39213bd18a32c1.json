@@ -1,0 +1,70 @@
+{
+  "judge_runs": [
+    {
+      "valid": false,
+      "ratings": {},
+      "weighted_score": null,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "1f001d0ee659c9d88f425e3574f43a52b4288b487a8b25a1d7caf66b4296981b",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:03:34.484306+00:00"
+      },
+      "error": "global_ambiguities must be strings"
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 4.0,
+        "internal_consistency_precedence": 4.0,
+        "organization_maintainability": 4.0
+      },
+      "weighted_score": 100.0,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "1f001d0ee659c9d88f425e3574f43a52b4288b487a8b25a1d7caf66b4296981b",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:03:59.997146+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 4.0,
+    "internal_consistency_precedence": 4.0,
+    "organization_maintainability": 4.0
+  },
+  "semantic_quality_score": 100.0,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": null,
+  "per_dimension_rating_differences": {},
+  "critical_failures": [],
+  "global_ambiguities": [],
+  "semantic_eligible": true
+}

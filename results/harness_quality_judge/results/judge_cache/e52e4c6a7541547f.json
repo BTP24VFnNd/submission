@@ -1,0 +1,76 @@
+{
+  "judge_runs": [
+    {
+      "valid": false,
+      "ratings": {},
+      "weighted_score": null,
+      "critical_failures": [],
+      "global_ambiguities": [],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "6622a2148a56512664f33bd08902795ef8fb1901dc64bc4ae573bad1fe96dcd2",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:33:22.711571+00:00"
+      },
+      "error": "global_ambiguities must be strings"
+    },
+    {
+      "valid": true,
+      "ratings": {
+        "role_alignment": 4.0,
+        "task_identity_primary_task": 4.0,
+        "input_object_boundary": 4.0,
+        "required_analysis_mode_scot": 4.0,
+        "scope_grounding": 4.0,
+        "prohibited_behavior": 4.0,
+        "output_contract_semantics": 3.0,
+        "internal_consistency_precedence": 3.0,
+        "organization_maintainability": 3.0
+      },
+      "weighted_score": 92.25,
+      "critical_failures": [],
+      "global_ambiguities": [
+        "The prompt states that \"start_line and end_line must be concrete integers, never null\" while the JSON schema shows these fields can be null (\"start_line\": null, \"end_line\": null). This creates a conflict about whether null values are permissible.",
+        "The confidence field is defined as a float between 0.0\u20111.0 but the prompt does not specify required precision or rounding, leaving minor ambiguity."
+      ],
+      "evidence": [],
+      "metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.0,
+        "returncode": 0,
+        "error": "",
+        "judge_prompt_sha256": "6622a2148a56512664f33bd08902795ef8fb1901dc64bc4ae573bad1fe96dcd2",
+        "rubric_version": "1.0",
+        "invocation_timestamp": "2026-09-25T11:33:32.667487+00:00"
+      },
+      "error": null
+    }
+  ],
+  "aggregated_ratings": {
+    "role_alignment": 4.0,
+    "task_identity_primary_task": 4.0,
+    "input_object_boundary": 4.0,
+    "required_analysis_mode_scot": 4.0,
+    "scope_grounding": 4.0,
+    "prohibited_behavior": 4.0,
+    "output_contract_semantics": 3.0,
+    "internal_consistency_precedence": 3.0,
+    "organization_maintainability": 3.0
+  },
+  "semantic_quality_score": 92.25,
+  "semantic_stability": "stable",
+  "absolute_total_score_difference": null,
+  "per_dimension_rating_differences": {},
+  "critical_failures": [],
+  "global_ambiguities": [
+    "The confidence field is defined as a float between 0.0\u20111.0 but the prompt does not specify required precision or rounding, leaving minor ambiguity.",
+    "The prompt states that \"start_line and end_line must be concrete integers, never null\" while the JSON schema shows these fields can be null (\"start_line\": null, \"end_line\": null). This creates a conflict about whether null values are permissible."
+  ],
+  "semantic_eligible": true
+}

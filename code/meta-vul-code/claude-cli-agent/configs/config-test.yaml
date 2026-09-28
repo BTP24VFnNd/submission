@@ -1,0 +1,36 @@
+model:
+  # Pin the full model id. Do NOT use an alias such as "opus": aliases resolve
+  # to the *latest* model of that tier, so "opus" silently became claude-opus-5
+  # and produced a held-out run that did not match the optimization model.
+  name: "claude-opus-4-6"
+  backend: "claude-cli"
+
+decoding:
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 4096
+
+dataset:
+  name: "primevul_paired_test"
+  path: "../../data/primevul/test_with_vul_lines_uuid.jsonl"
+  code_field: "func"
+  label_field: "target"
+  id_field: "cve"
+
+policies:
+  - scot
+  - mot
+  - tot
+
+prompts_dir: "prompts/"
+outputs_dir: "outputs/"
+
+agentic:
+  enabled: true
+
+runner:
+  timeout_s: 900
+  retries: 3
+  retry_delay_s: 1.0
+  concurrency: 1
+  skip_existing: true
